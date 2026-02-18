@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 
 // ─────────────────────────────────────────────────────────────
@@ -10,11 +12,11 @@ class SettingsRoute extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: const Color(0xFF0D1117),
       appBar: AppBar(
         title: const Text('Settings'),
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.yellow,
+        backgroundColor: const Color(0xFF0D1117),
+        foregroundColor: const Color(0xFF2DD4BF),
       ),
       body: const SettingsPage(),
     );
@@ -202,10 +204,10 @@ class _SettingsPageState extends State<SettingsPage> {
           const Center(
             child: Column(children: [
               Text('Maji Smart v1.0.0',
-                  style: TextStyle(color: Colors.white38, fontSize: 12)),
+                  style: TextStyle(color: Color(0xFF484F58), fontSize: 12)),
               SizedBox(height: 2),
               Text('© 2025 Snapp Africa',
-                  style: TextStyle(color: Colors.white24, fontSize: 11)),
+                  style: TextStyle(color: Color(0xFF484F58), fontSize: 11)),
             ]),
           ),
 
@@ -218,7 +220,7 @@ class _SettingsPageState extends State<SettingsPage> {
   void _snack(BuildContext context, String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: Colors.grey[850],
+      backgroundColor: const Color(0xFF1C2333),
       behavior: SnackBarBehavior.floating,
       duration: const Duration(seconds: 2),
     ));
@@ -228,18 +230,18 @@ class _SettingsPageState extends State<SettingsPage> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: Colors.grey[900],
+        backgroundColor: const Color(0xFF161B22),
         title: Text(title, style: const TextStyle(color: Colors.white)),
-        content: Text(message, style: const TextStyle(color: Colors.white70)),
+        content: Text(message, style: const TextStyle(color: Color(0xFF8B949E))),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('Cancel',
-                  style: TextStyle(color: Colors.white54))),
+                  style: TextStyle(color: Color(0xFF8B949E)))),
           TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('Confirm',
-                  style: TextStyle(color: Colors.yellow))),
+                  style: TextStyle(color: Color(0xFF2DD4BF)))),
         ],
       ),
     );
@@ -255,14 +257,12 @@ class _ProfileCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          // ignore: deprecated_member_use
-          colors: [Colors.yellow.withOpacity(0.15), Colors.transparent],
+          colors: [const Color(0xFF2DD4BF).withOpacity(0.15), Colors.transparent],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(14),
-        // ignore: deprecated_member_use
-        border: Border.all(color: Colors.yellow.withOpacity(0.3)),
+        border: Border.all(color: const Color(0xFF2DD4BF).withOpacity(0.3)),
       ),
       child: Row(
         children: [
@@ -270,12 +270,11 @@ class _ProfileCard extends StatelessWidget {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              // ignore: deprecated_member_use
-              color: Colors.yellow.withOpacity(0.2),
+              color: const Color(0xFF2DD4BF).withOpacity(0.2),
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.yellow, width: 2),
+              border: Border.all(color: const Color(0xFF2DD4BF), width: 2),
             ),
-            child: const Icon(Icons.person, color: Colors.yellow, size: 30),
+            child: const Icon(Icons.person, color: Color(0xFF2DD4BF), size: 30),
           ),
           const SizedBox(width: 14),
           const Expanded(
@@ -284,21 +283,21 @@ class _ProfileCard extends StatelessWidget {
               children: [
                 Text('John Kamau',
                     style: TextStyle(
-                        color: Colors.white,
+                        color: Color(0xFFE6EDF3),
                         fontSize: 16,
                         fontWeight: FontWeight.bold)),
                 SizedBox(height: 2),
                 Text('System Administrator',
                     style:
-                        TextStyle(color: Colors.white54, fontSize: 12)),
+                        TextStyle(color: Color(0xFF8B949E), fontSize: 12)),
                 SizedBox(height: 2),
                 Text('john.kamau@ngaraestate.co.ke',
                     style:
-                        TextStyle(color: Colors.yellow, fontSize: 11)),
+                        TextStyle(color: Color(0xFF2DD4BF), fontSize: 11)),
               ],
             ),
           ),
-          const Icon(Icons.chevron_right, color: Colors.white38),
+          const Icon(Icons.chevron_right, color: Color(0xFF484F58)),
         ],
       ),
     );
@@ -315,11 +314,11 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(children: [
-      Icon(icon, color: Colors.yellow, size: 16),
+      Icon(icon, color: const Color(0xFF2DD4BF), size: 16),
       const SizedBox(width: 6),
       Text(title,
           style: const TextStyle(
-              color: Colors.yellow,
+              color: Color(0xFF2DD4BF),
               fontSize: 13,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.5)),
@@ -335,9 +334,9 @@ class _SettingsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey[900],
+        color: const Color(0xFF161B22),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white12),
+        border: Border.all(color: const Color(0xFF30363D)),
       ),
       child: Column(children: children),
     );
@@ -366,22 +365,20 @@ class _ToggleTile extends StatelessWidget {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(title,
                 style:
-                    const TextStyle(color: Colors.white, fontSize: 14)),
+                    const TextStyle(color: Color(0xFFE6EDF3), fontSize: 14)),
             const SizedBox(height: 2),
             Text(subtitle,
                 style: const TextStyle(
-                    color: Colors.white54, fontSize: 11)),
+                    color: Color(0xFF8B949E), fontSize: 11)),
           ]),
         ),
         Switch(
           value: value,
           onChanged: onChanged,
-          // ignore: deprecated_member_use
-          activeColor: Colors.yellow,
-          // ignore: deprecated_member_use
-          activeTrackColor: Colors.yellow.withOpacity(0.3),
-          inactiveThumbColor: Colors.white38,
-          inactiveTrackColor: Colors.white12,
+          activeColor: const Color(0xFF2DD4BF),
+          activeTrackColor: const Color(0xFF2DD4BF).withOpacity(0.3),
+          inactiveThumbColor: const Color(0xFF484F58),
+          inactiveTrackColor: const Color(0xFF30363D),
         ),
       ]),
     );
@@ -410,15 +407,15 @@ class _DropdownTile extends StatelessWidget {
         children: [
           Text(title,
               style:
-                  const TextStyle(color: Colors.white, fontSize: 14)),
+                  const TextStyle(color: Color(0xFFE6EDF3), fontSize: 14)),
           DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: value,
-              dropdownColor: Colors.grey[850],
+              dropdownColor: const Color(0xFF1C2333),
               style:
-                  const TextStyle(color: Colors.yellow, fontSize: 13),
+                  const TextStyle(color: Color(0xFF2DD4BF), fontSize: 13),
               icon: const Icon(Icons.keyboard_arrow_down,
-                  color: Colors.yellow, size: 16),
+                  color: Color(0xFF2DD4BF), size: 16),
               items: options
                   .map((o) =>
                       DropdownMenuItem(value: o, child: Text(o)))
@@ -458,7 +455,7 @@ class _ActionTile extends StatelessWidget {
         padding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(children: [
-          Icon(icon, color: iconColor ?? Colors.white54, size: 20),
+          Icon(icon, color: iconColor ?? const Color(0xFF8B949E), size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -466,16 +463,16 @@ class _ActionTile extends StatelessWidget {
                 children: [
                   Text(title,
                       style: TextStyle(
-                          color: titleColor ?? Colors.white,
+                          color: titleColor ?? const Color(0xFFE6EDF3),
                           fontSize: 14)),
                   const SizedBox(height: 2),
                   Text(subtitle,
                       style: const TextStyle(
-                          color: Colors.white54, fontSize: 11)),
+                          color: Color(0xFF8B949E), fontSize: 11)),
                 ]),
           ),
           const Icon(Icons.chevron_right,
-              color: Colors.white24, size: 18),
+              color: Color(0xFF484F58), size: 18),
         ]),
       ),
     );
@@ -486,6 +483,6 @@ class _Divider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Divider(
-        color: Colors.white10, height: 1, indent: 16, endIndent: 16);
+        color: Color(0xFF30363D), height: 1, indent: 16, endIndent: 16);
   }
 }

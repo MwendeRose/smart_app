@@ -1,9 +1,7 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 
-// ─────────────────────────────────────────────────────────────
-// AnalyticsPage — pure content widget, NO Scaffold inside.
-// Embedded directly into HomeScreen's body via _pages list.
-// ─────────────────────────────────────────────────────────────
 class AnalyticsPage extends StatefulWidget {
   const AnalyticsPage({super.key});
 
@@ -22,7 +20,6 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -30,34 +27,26 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 'Water Analytics',
                 style: TextStyle(
                   fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.yellow,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFFF1F5F9),
+                  letterSpacing: -0.3,
                 ),
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.grey[900],
+                  color: const Color(0xFF1E293B),
                   borderRadius: BorderRadius.circular(20),
-                  border:
-                      // ignore: deprecated_member_use
-                      Border.all(color: Colors.yellow.withOpacity(0.4)),
+                  border: Border.all(color: const Color(0xFF334155)),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: _selectedPeriod,
-                    dropdownColor: Colors.grey[900],
-                    style:
-                        const TextStyle(color: Colors.yellow, fontSize: 13),
-                    icon: const Icon(Icons.keyboard_arrow_down,
-                        color: Colors.yellow, size: 18),
-                    items: _periods
-                        .map((p) =>
-                            DropdownMenuItem(value: p, child: Text(p)))
-                        .toList(),
-                    onChanged: (val) =>
-                        setState(() => _selectedPeriod = val!),
+                    dropdownColor: const Color(0xFF1E293B),
+                    style: const TextStyle(color: Color(0xFF0EA5E9), fontSize: 13),
+                    icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF0EA5E9), size: 18),
+                    items: _periods.map((p) => DropdownMenuItem(value: p, child: Text(p))).toList(),
+                    onChanged: (val) => setState(() => _selectedPeriod = val!),
                   ),
                 ),
               ),
@@ -66,82 +55,36 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
 
           const SizedBox(height: 20),
 
-          // Summary cards row 1
-          Row(
-            children: [
-              _SummaryCard(
-                label: 'Total Usage',
-                value: '12,450 L',
-                icon: Icons.water_drop,
-                trend: '+5.2%',
-                isPositive: false,
-              ),
-              const SizedBox(width: 12),
-              _SummaryCard(
-                label: 'Avg Daily',
-                value: '1,778 L',
-                icon: Icons.show_chart,
-                trend: '-2.1%',
-                isPositive: true,
-              ),
-            ],
-          ),
+          Row(children: [
+            _SummaryCard(label: 'Total Usage', value: '12,450 L', icon: Icons.water_drop_outlined, trend: '+5.2%', isPositive: false),
+            const SizedBox(width: 12),
+            _SummaryCard(label: 'Avg Daily', value: '1,778 L', icon: Icons.show_chart, trend: '-2.1%', isPositive: true),
+          ]),
           const SizedBox(height: 12),
-
-          // Summary cards row 2
-          Row(
-            children: [
-              _SummaryCard(
-                label: 'Peak Hour',
-                value: '6:00 AM',
-                icon: Icons.schedule,
-                trend: 'Morning',
-                isPositive: true,
-              ),
-              const SizedBox(width: 12),
-              _SummaryCard(
-                label: 'Efficiency',
-                value: '87%',
-                icon: Icons.bolt,
-                trend: '+3.4%',
-                isPositive: true,
-              ),
-            ],
-          ),
+          Row(children: [
+            _SummaryCard(label: 'Peak Hour', value: '6:00 AM', icon: Icons.schedule_outlined, trend: 'Morning', isPositive: true),
+            const SizedBox(width: 12),
+            _SummaryCard(label: 'Efficiency', value: '87%', icon: Icons.bolt_outlined, trend: '+3.4%', isPositive: true),
+          ]),
 
           const SizedBox(height: 24),
 
-          const Text(
-            'Daily Usage (Litres)',
-            style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Colors.white70),
-          ),
+          const Text('Daily Usage (Litres)',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF94A3B8))),
           const SizedBox(height: 12),
           const _UsageBarChart(),
 
           const SizedBox(height: 24),
 
-          const Text(
-            'Sub-Meter Breakdown',
-            style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Colors.white70),
-          ),
+          const Text('Sub-Meter Breakdown',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF94A3B8))),
           const SizedBox(height: 12),
           const _SubMeterBreakdown(),
 
           const SizedBox(height: 24),
 
-          const Text(
-            'Monthly Consumption Trend',
-            style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Colors.white70),
-          ),
+          const Text('Monthly Consumption Trend',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF94A3B8))),
           const SizedBox(height: 12),
           const _ConsumptionTrend(),
 
@@ -152,21 +95,14 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   }
 }
 
-/* ── Summary Card ── */
-
 class _SummaryCard extends StatelessWidget {
-  final String label;
-  final String value;
+  final String label, value, trend;
   final IconData icon;
-  final String trend;
   final bool isPositive;
 
   const _SummaryCard({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.trend,
-    required this.isPositive,
+    required this.label, required this.value, required this.icon,
+    required this.trend, required this.isPositive,
   });
 
   @override
@@ -175,59 +111,38 @@ class _SummaryCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.grey[900],
+          color: const Color(0xFF1E293B),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white12),
+          border: Border.all(color: const Color(0xFF334155)),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Icon(icon, color: Colors.yellow, size: 20),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: isPositive
-                        // ignore: deprecated_member_use
-                        ? Colors.green.withOpacity(0.15)
-                        // ignore: deprecated_member_use
-                        : Colors.red.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    trend,
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: isPositive
-                          ? Colors.greenAccent
-                          : Colors.redAccent,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Icon(icon, color: const Color(0xFF0EA5E9), size: 18),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: isPositive
+                    ? const Color(0xFF10B981).withOpacity(0.15)
+                    : const Color(0xFFEF4444).withOpacity(0.15),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(trend,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isPositive ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                    fontWeight: FontWeight.w600,
+                  )),
             ),
-            const SizedBox(height: 8),
-            Text(value,
-                style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white)),
-            const SizedBox(height: 2),
-            Text(label,
-                style:
-                    const TextStyle(fontSize: 11, color: Colors.white54)),
-          ],
-        ),
+          ]),
+          const SizedBox(height: 10),
+          Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFFF1F5F9))),
+          const SizedBox(height: 2),
+          Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+        ]),
       ),
     );
   }
 }
-
-/* ── Usage Bar Chart ── */
 
 class _UsageBarChart extends StatelessWidget {
   const _UsageBarChart();
@@ -241,9 +156,9 @@ class _UsageBarChart extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey[900],
+        color: const Color(0xFF1E293B),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white12),
+        border: Border.all(color: const Color(0xFF334155)),
       ),
       child: SizedBox(
         height: 140,
@@ -252,36 +167,29 @@ class _UsageBarChart extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: List.generate(days.length, (i) {
             final ratio = values[i] / maxVal;
+            final isMax = values[i] == maxVal;
             return Column(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Text(
-                  '${(values[i] / 1000).toStringAsFixed(1)}k',
-                  style: const TextStyle(
-                      color: Colors.white54, fontSize: 9),
-                ),
+                Text('${(values[i] / 1000).toStringAsFixed(1)}k',
+                    style: const TextStyle(color: Color(0xFF475569), fontSize: 9)),
                 const SizedBox(height: 4),
                 Container(
-                  width: 28,
+                  width: 26,
                   height: 100 * ratio,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.bottomCenter,
                       end: Alignment.topCenter,
-                      colors: [
-                        // ignore: deprecated_member_use
-                        Colors.yellow.withOpacity(0.9),
-                        // ignore: deprecated_member_use
-                        Colors.yellow.withOpacity(0.4),
-                      ],
+                      colors: isMax
+                          ? [const Color(0xFF0EA5E9), const Color(0xFF38BDF8)]
+                          : [const Color(0xFF0EA5E9).withOpacity(0.4), const Color(0xFF0EA5E9).withOpacity(0.2)],
                     ),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
                 const SizedBox(height: 6),
-                Text(days[i],
-                    style: const TextStyle(
-                        color: Colors.white54, fontSize: 10)),
+                Text(days[i], style: const TextStyle(color: Color(0xFF64748B), fontSize: 10)),
               ],
             );
           }),
@@ -290,8 +198,6 @@ class _UsageBarChart extends StatelessWidget {
     );
   }
 }
-
-/* ── Sub-meter Breakdown ── */
 
 class _SubMeterBreakdown extends StatelessWidget {
   const _SubMeterBreakdown();
@@ -308,50 +214,36 @@ class _SubMeterBreakdown extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey[900],
+        color: const Color(0xFF1E293B),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white12),
+        border: Border.all(color: const Color(0xFF334155)),
       ),
       child: Column(
-        children: meters.map((m) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(m['name'] as String,
-                        style: const TextStyle(
-                            color: Colors.white, fontSize: 13)),
-                    Text(
-                        '${(m['usage'] as double).toStringAsFixed(0)} L',
-                        style: const TextStyle(
-                            color: Colors.white70, fontSize: 12)),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: m['percent'] as double,
-                    backgroundColor: Colors.white12,
-                    valueColor: const AlwaysStoppedAnimation<Color>(
-                        Colors.yellow),
-                    minHeight: 7,
-                  ),
-                ),
-              ],
+        children: meters.map((m) => Padding(
+          padding: const EdgeInsets.only(bottom: 14),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              Text(m['name'] as String,
+                  style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 13)),
+              Text('${(m['usage'] as double).toStringAsFixed(0)} L',
+                  style: const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+            ]),
+            const SizedBox(height: 7),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: m['percent'] as double,
+                backgroundColor: const Color(0xFF0F172A),
+                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF0EA5E9)),
+                minHeight: 6,
+              ),
             ),
-          );
-        }).toList(),
+          ]),
+        )).toList(),
       ),
     );
   }
 }
-
-/* ── Monthly Consumption Trend ── */
 
 class _ConsumptionTrend extends StatelessWidget {
   const _ConsumptionTrend();
@@ -364,61 +256,50 @@ class _ConsumptionTrend extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey[900],
+        color: const Color(0xFF1E293B),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white12),
+        border: Border.all(color: const Color(0xFF334155)),
       ),
       child: Column(
         children: List.generate(months.length, (i) {
           final isLast = i == months.length - 1;
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 5),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 32,
-                  child: Text(
-                    months[i],
+            child: Row(children: [
+              SizedBox(
+                width: 32,
+                child: Text(months[i],
                     style: TextStyle(
-                      color: isLast ? Colors.yellow : Colors.white54,
+                      color: isLast ? const Color(0xFF0EA5E9) : const Color(0xFF64748B),
                       fontSize: 12,
-                      fontWeight: isLast
-                          ? FontWeight.bold
-                          : FontWeight.normal,
+                      fontWeight: isLast ? FontWeight.w700 : FontWeight.normal,
+                    )),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: values[i] / 14000,
+                    backgroundColor: const Color(0xFF0F172A),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      isLast ? const Color(0xFF0EA5E9) : const Color(0xFF0EA5E9).withOpacity(0.35),
                     ),
+                    minHeight: 7,
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: values[i] / 14000,
-                      backgroundColor: Colors.white12,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        isLast
-                            ? Colors.yellow
-                            // ignore: deprecated_member_use
-                            : Colors.yellow.withOpacity(0.5),
-                      ),
-                      minHeight: 8,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 52,
-                  child: Text(
-                    '${(values[i] / 1000).toStringAsFixed(1)}k L',
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 52,
+                child: Text('${(values[i] / 1000).toStringAsFixed(1)}k L',
                     textAlign: TextAlign.right,
                     style: TextStyle(
-                      color: isLast ? Colors.yellow : Colors.white54,
+                      color: isLast ? const Color(0xFF0EA5E9) : const Color(0xFF475569),
                       fontSize: 11,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+                    )),
+              ),
+            ]),
           );
         }),
       ),
