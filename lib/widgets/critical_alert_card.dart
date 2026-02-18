@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smart_app/screens/alerts_page.dart';
-import 'alerts_page.dart';
+
 
 class CriticalAlertCard extends StatelessWidget {
   const CriticalAlertCard({super.key});
