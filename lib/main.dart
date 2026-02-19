@@ -7,7 +7,7 @@ import 'screens/home_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Restore saved session before first frame
-  await AuthService().init();
+  await AuthService.instance.init();
   runApp(const MajiSmartApp());
 }
 
@@ -39,10 +39,9 @@ class _AuthGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: AuthService(),
+      listenable: AuthService.instance,
       builder: (context, _) {
-        final auth = AuthService();
-        return auth.isLoggedIn
+        return AuthService.instance.isLoggedIn
             ? const HomeScreen()
             : const LoginPage();
       },

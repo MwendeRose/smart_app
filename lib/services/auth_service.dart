@@ -1,222 +1,323 @@
 // lib/services/auth_service.dart
-// ignore_for_file: deprecated_member_use
+//
+// ── SETUP INSTRUCTIONS ────────────────────────────────────────
+// This file works in TWO modes:
+//
+// MODE 1 (current) — No Firebase, compiles immediately.
+//   Auth is mocked so you can build the full UI right now.
+//
+// MODE 2 — Real Firebase (when you're ready):
+//   1. Run:  flutter pub add firebase_core firebase_auth
+//                          google_sign_in shared_preferences
+//   2. Follow: https://firebase.google.com/docs/flutter/setup
+//   3. In this file: set  _useFirebase = true  (line 23)
+//      and uncomment the three import lines below.
+//
+// import 'package:firebase_auth/firebase_auth.dart';
+// import 'package:google_sign_in/google_sign_in.dart';
+// import 'package:shared_preferences/shared_preferences.dart';
 
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+
+// ─── toggle ──────────────────────────────────────────────────
+// Set to true once Firebase is installed & configured.
+const bool _useFirebase = false;
+
+// ─── User model ───────────────────────────────────────────────
 
 class AppUser {
-  final String id;
   final String name;
   final String email;
   final String role;
   final String phone;
 
   const AppUser({
-    required this.id,
     required this.name,
     required this.email,
-    required this.role,
-    required this.phone,
+    this.role  = 'System Administrator',
+    this.phone = '',
   });
 
-  factory AppUser.fromJson(Map<String, dynamic> j) => AppUser(
-        id:    j['id']?.toString()   ?? '',
-        name:  j['name']?.toString() ?? 'User',
-        email: j['email']?.toString() ?? '',
-        role:  j['role']?.toString()  ?? 'User',
-        phone: j['phone']?.toString() ?? '',
-      );
+  String get firstName => name.split(' ').first;
 
-  /// Initials (up to 2 letters)
   String get initials {
     final parts = name.trim().split(' ');
     if (parts.length >= 2) {
       return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
     }
-    return name.isNotEmpty ? name[0].toUpperCase() : 'U';
+    return name.isNotEmpty ? name[0].toUpperCase() : '?';
   }
 
-  /// First name only
-  String get firstName => name.split(' ').first;
-
-  AppUser copyWith({String? name, String? role, String? phone}) => AppUser(
-        id: id,
-        name: name ?? this.name,
-        email: email,
-        role: role ?? this.role,
-        phone: phone ?? this.phone,
-      );
+  AppUser copyWith({String? name, String? email, String? role, String? phone}) {
+    return AppUser(
+      name:  name  ?? this.name,
+      email: email ?? this.email,
+      role:  role  ?? this.role,
+      phone: phone ?? this.phone,
+    );
+  }
 }
 
+// ─── AuthService ─────────────────────────────────────────────
+
 class AuthService extends ChangeNotifier {
-  static final AuthService _instance = AuthService._();
-  factory AuthService() => _instance;
-  AuthService._();
+  // ── Singleton ─────────────────────────────────────────────
+  AuthService._internal();
+  static final AuthService instance = AuthService._internal();
+  factory AuthService() => instance;
 
-  // ── Replace with your machine's LAN IP when running on a real device ──
-  static const String _baseUrl = 'http://10.0.2.2:3000'; // Android emulator
-  // static const String _baseUrl = 'http://localhost:3000'; // iOS simulator
+  // ── State ─────────────────────────────────────────────────
+  bool     loading    = false;
+  bool     isLoggedIn = false;
+  AppUser? user;
 
-  AppUser? _user;
-  String?  _token;
-  bool     _loading = false;
-
-  AppUser? get user    => _user;
-  String?  get token   => _token;
-  bool     get loading => _loading;
-  bool     get isLoggedIn => _token != null && _user != null;
-
-  // ── Persist token ─────────────────────────────────────────
+  // ── Init: restore saved session ───────────────────────────
   Future<void> init() async {
-    final prefs = await SharedPreferences.getInstance();
-    _token = prefs.getString('token');
-    final userJson = prefs.getString('user');
-    if (_token != null && userJson != null) {
-      _user = AppUser.fromJson(jsonDecode(userJson));
-      notifyListeners();
-      // Refresh user data from server
-      await fetchMe();
+    if (!_useFirebase) {
+      // Mock: nothing to restore
+      return;
+    }
+
+    // ── Firebase (uncomment when _useFirebase = true) ────────
+    // final firebaseUser = FirebaseAuth.instance.currentUser;
+    // if (firebaseUser != null) {
+    //   final prefs = await SharedPreferences.getInstance();
+    //   user = AppUser(
+    //     name:  firebaseUser.displayName
+    //            ?? firebaseUser.email!.split('@').first,
+    //     email: firebaseUser.email ?? '',
+    //     role:  prefs.getString('user_role')  ?? 'System Administrator',
+    //     phone: prefs.getString('user_phone') ?? '',
+    //   );
+    //   isLoggedIn = true;
+    //   notifyListeners();
+    // }
+  }
+
+  // ── Email / password login ────────────────────────────────
+  Future<String?> login({
+    required String email,
+    required String password,
+  }) async {
+    _setLoading(true);
+    try {
+      if (!_useFirebase) {
+        // ── Mock login ───────────────────────────────────────
+        await Future.delayed(const Duration(milliseconds: 800));
+        if (password.length < 6) return 'Incorrect password.';
+        user = AppUser(name: email.split('@').first, email: email);
+        isLoggedIn = true;
+        notifyListeners();
+        return null;
+      }
+
+      // ── Firebase (uncomment when _useFirebase = true) ────────
+      // final result = await FirebaseAuth.instance
+      //     .signInWithEmailAndPassword(email: email, password: password);
+      // final prefs = await SharedPreferences.getInstance();
+      // user = AppUser(
+      //   name:  result.user?.displayName ?? email.split('@').first,
+      //   email: result.user?.email ?? email,
+      //   role:  prefs.getString('user_role')  ?? 'System Administrator',
+      //   phone: prefs.getString('user_phone') ?? '',
+      // );
+      // isLoggedIn = true;
+      // notifyListeners();
+      // return null;
+
+      return null;
+    } on Exception catch (e) {
+      return _parseError(e);
+    } finally {
+      _setLoading(false);
     }
   }
 
-  Future<void> _persist() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (_token != null) {
-      await prefs.setString('token', _token!);
-    } else {
-      await prefs.remove('token');
-    }
-    if (_user != null) {
-      await prefs.setString('user', jsonEncode({
-        'id': _user!.id, 'name': _user!.name,
-        'email': _user!.email, 'role': _user!.role, 'phone': _user!.phone,
-      }));
-    } else {
-      await prefs.remove('user');
-    }
-  }
-
-  Map<String, String> get _authHeaders => {
-        'Content-Type': 'application/json',
-        if (_token != null) 'Authorization': 'Bearer $_token',
-      };
-
-  // ── Sign Up ───────────────────────────────────────────────
+  // ── Email / password sign-up ──────────────────────────────
   Future<String?> signUp({
     required String name,
     required String email,
     required String password,
-    String phone = '',
-    String role  = 'System Administrator',
+    String? phone,
   }) async {
-    _loading = true; notifyListeners();
+    _setLoading(true);
     try {
-      final res = await http.post(
-        Uri.parse('$_baseUrl/api/auth/signup'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'name': name, 'email': email, 'password': password,
-          'phone': phone, 'role': role,
-        }),
-      );
-      final data = jsonDecode(res.body);
-      if (res.statusCode == 201) {
-        _token = data['token'];
-        _user  = AppUser.fromJson(data['user']);
-        await _persist();
-        notifyListeners();
-        return null; // success
-      }
-      return data['error'] ?? 'Sign-up failed';
-    } catch (e) {
-      return 'Network error: $e';
-    } finally {
-      _loading = false; notifyListeners();
-    }
-  }
-
-  // ── Login ─────────────────────────────────────────────────
-  Future<String?> login({required String email, required String password}) async {
-    _loading = true; notifyListeners();
-    try {
-      final res = await http.post(
-        Uri.parse('$_baseUrl/api/auth/login'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email, 'password': password}),
-      );
-      final data = jsonDecode(res.body);
-      if (res.statusCode == 200) {
-        _token = data['token'];
-        _user  = AppUser.fromJson(data['user']);
-        await _persist();
+      if (!_useFirebase) {
+        // ── Mock sign-up ─────────────────────────────────────
+        await Future.delayed(const Duration(milliseconds: 800));
+        user = AppUser(name: name, email: email, phone: phone ?? '');
+        isLoggedIn = true;
         notifyListeners();
         return null;
       }
-      return data['error'] ?? 'Login failed';
-    } catch (e) {
-      return 'Network error: $e';
+
+      // ── Firebase (uncomment when _useFirebase = true) ────────
+      // final result = await FirebaseAuth.instance
+      //     .createUserWithEmailAndPassword(email: email, password: password);
+      // await result.user?.updateDisplayName(name);
+      // user = AppUser(name: name, email: email, phone: phone ?? '');
+      // final prefs = await SharedPreferences.getInstance();
+      // await prefs.setString('user_phone', phone ?? '');
+      // isLoggedIn = true;
+      // notifyListeners();
+      // return null;
+
+      return null;
+    } on Exception catch (e) {
+      return _parseError(e);
     } finally {
-      _loading = false; notifyListeners();
+      _setLoading(false);
     }
   }
 
-  // ── Fetch current user from server ────────────────────────
-  Future<void> fetchMe() async {
-    if (_token == null) return;
+  // ── Google Sign-In ────────────────────────────────────────
+  Future<String?> signInWithGoogle() async {
+    _setLoading(true);
     try {
-      final res = await http.get(
-        Uri.parse('$_baseUrl/api/auth/me'),
-        headers: _authHeaders,
-      );
-      if (res.statusCode == 200) {
-        _user = AppUser.fromJson(jsonDecode(res.body));
-        await _persist();
-        notifyListeners();
-      } else if (res.statusCode == 401) {
-        // Token expired
-        await signOut();
+      if (!_useFirebase) {
+        await Future.delayed(const Duration(milliseconds: 800));
+        return 'Google Sign-In requires Firebase. Set _useFirebase = true.';
       }
-    } catch (_) {}
+
+      // ── Firebase (uncomment when _useFirebase = true) ────────
+      // final googleUser = await GoogleSignIn().signIn();
+      // if (googleUser == null) return 'Google sign-in cancelled.';
+      // final googleAuth = await googleUser.authentication;
+      // final credential = GoogleAuthProvider.credential(
+      //   accessToken: googleAuth.accessToken,
+      //   idToken:     googleAuth.idToken,
+      // );
+      // final result = await FirebaseAuth.instance
+      //     .signInWithCredential(credential);
+      // final prefs = await SharedPreferences.getInstance();
+      // user = AppUser(
+      //   name:  result.user?.displayName ?? googleUser.displayName ?? 'User',
+      //   email: result.user?.email ?? googleUser.email,
+      //   role:  prefs.getString('user_role')  ?? 'System Administrator',
+      //   phone: prefs.getString('user_phone') ?? '',
+      // );
+      // isLoggedIn = true;
+      // notifyListeners();
+      // return null;
+
+      return null;
+    } on Exception catch (e) {
+      return _parseError(e);
+    } finally {
+      _setLoading(false);
+    }
   }
 
-  // ── Update profile ────────────────────────────────────────
-  Future<String?> updateProfile({String? name, String? phone, String? role, String? password}) async {
-    if (_token == null) return 'Not authenticated';
-    _loading = true; notifyListeners();
+  // ── Reset password (forgot password) ─────────────────────
+  Future<String?> resetPassword({required String email}) async {
+    _setLoading(true);
     try {
-      final body = <String, dynamic>{};
-      if (name     != null) body['name']     = name;
-      if (phone    != null) body['phone']    = phone;
-      if (role     != null) body['role']     = role;
-      if (password != null) body['password'] = password;
+      if (email.trim().isEmpty) return 'Please enter your email address.';
+      if (!email.contains('@')) return 'Please enter a valid email address.';
 
-      final res = await http.patch(
-        Uri.parse('$_baseUrl/api/auth/me'),
-        headers: _authHeaders,
-        body: jsonEncode(body),
-      );
-      final data = jsonDecode(res.body);
-      if (res.statusCode == 200) {
-        _user = AppUser.fromJson(data);
-        await _persist();
-        notifyListeners();
+      if (!_useFirebase) {
+        // ── Mock: simulate sending reset email ───────────────
+        await Future.delayed(const Duration(milliseconds: 900));
+        return null; // null = success
+      }
+
+      // ── Firebase (uncomment when _useFirebase = true) ────────
+      // await FirebaseAuth.instance.sendPasswordResetEmail(
+      //   email: email.trim(),
+      // );
+      // return null;
+
+      return null;
+    } on Exception catch (e) {
+      return _parseError(e);
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // ── Update profile / password ─────────────────────────────
+  Future<String?> updateProfile({
+    String? name,
+    String? phone,
+    String? role,
+    String? password,
+  }) async {
+    _setLoading(true);
+    try {
+      if (!_useFirebase) {
+        // ── Mock update ──────────────────────────────────────
+        await Future.delayed(const Duration(milliseconds: 600));
+        if (user != null) {
+          user = user!.copyWith(name: name, phone: phone, role: role);
+          notifyListeners();
+        }
         return null;
       }
-      return data['error'] ?? 'Update failed';
-    } catch (e) {
-      return 'Network error: $e';
+
+      // ── Firebase (uncomment when _useFirebase = true) ────────
+      // final firebaseUser = FirebaseAuth.instance.currentUser;
+      // if (firebaseUser == null) return 'Not logged in.';
+      // if (password != null && password.isNotEmpty) {
+      //   await firebaseUser.updatePassword(password);
+      // }
+      // if (name != null && name.isNotEmpty) {
+      //   await firebaseUser.updateDisplayName(name);
+      // }
+      // if (user != null) {
+      //   user = user!.copyWith(name: name, phone: phone, role: role);
+      //   final prefs = await SharedPreferences.getInstance();
+      //   await prefs.setString('user_role',  user!.role);
+      //   await prefs.setString('user_phone', user!.phone);
+      //   notifyListeners();
+      // }
+      // return null;
+
+      return null;
+    } on Exception catch (e) {
+      return _parseError(e);
     } finally {
-      _loading = false; notifyListeners();
+      _setLoading(false);
     }
   }
 
-  // ── Sign Out ──────────────────────────────────────────────
+  // ── Sign out ──────────────────────────────────────────────
   Future<void> signOut() async {
-    _token = null;
-    _user  = null;
-    await _persist();
+    _setLoading(true);
+    try {
+      if (_useFirebase) {
+        // await FirebaseAuth.instance.signOut();
+        // await GoogleSignIn().signOut();
+      }
+      await Future.delayed(const Duration(milliseconds: 300));
+      user       = null;
+      isLoggedIn = false;
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // ── Error parser ──────────────────────────────────────────
+  String _parseError(Exception e) {
+    final msg = e.toString();
+    // Firebase error codes (active when _useFirebase = true)
+    if (msg.contains('user-not-found'))     return 'No account found with that email.';
+    if (msg.contains('wrong-password'))     return 'Incorrect password.';
+    if (msg.contains('invalid-credential')) return 'Invalid email or password.';
+    if (msg.contains('email-already-in-use')) return 'An account with that email already exists.';
+    if (msg.contains('weak-password'))      return 'Password must be at least 6 characters.';
+    if (msg.contains('invalid-email'))      return 'Please enter a valid email address.';
+    if (msg.contains('too-many-requests'))  return 'Too many attempts. Try again later.';
+    if (msg.contains('network-request-failed')) return 'Network error. Check your connection.';
+    if (msg.contains('requires-recent-login')) {
+      return 'Please sign out and sign in again before changing your password.';
+    }
+    return 'Something went wrong. Please try again.';
+  }
+
+  // ── Helper ────────────────────────────────────────────────
+  void _setLoading(bool value) {
+    loading = value;
     notifyListeners();
   }
 }

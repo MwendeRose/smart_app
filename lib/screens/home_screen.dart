@@ -23,8 +23,8 @@ class AppColors {
   static const textPrimary = Color(0xFFE6EDF3);
   static const textSub     = Color(0xFF8B949E);
   static const textMuted   = Color(0xFF484F58);
-  static const sidebarW           = 220.0;
-  static const sidebarCollapsedW  = 64.0;
+  static const sidebarW          = 220.0;
+  static const sidebarCollapsedW = 64.0;
 }
 
 // ─── Greeting helper ─────────────────────────────────────────
@@ -45,16 +45,18 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
-  int _currentIndex = 0;
+  int  _currentIndex   = 0;
   bool _sidebarExpanded = true;
-  late AnimationController _sidebarAnim;
-  late Animation<double> _sidebarWidth;
 
-  final _auth = AuthService();
+  late AnimationController _sidebarAnim;
+  late Animation<double>   _sidebarWidth;
+
+  // ── Use the singleton, not a fresh instance ───────────────
+  final _auth = AuthService.instance;
 
   final List<_NavItem> _navItems = const [
-    _NavItem(icon: Icons.dashboard_rounded,    label: 'Dashboard'),
-    _NavItem(icon: Icons.bar_chart_rounded,    label: 'Analytics'),
+    _NavItem(icon: Icons.dashboard_rounded,     label: 'Dashboard'),
+    _NavItem(icon: Icons.bar_chart_rounded,     label: 'Analytics'),
     _NavItem(icon: Icons.notifications_rounded, label: 'Alerts'),
     _NavItem(icon: Icons.tune_rounded,          label: 'Settings'),
   ];
@@ -69,7 +71,7 @@ class _HomeScreenState extends State<HomeScreen>
     );
     _sidebarWidth = Tween<double>(
       begin: AppColors.sidebarCollapsedW,
-      end: AppColors.sidebarW,
+      end:   AppColors.sidebarW,
     ).animate(CurvedAnimation(parent: _sidebarAnim, curve: Curves.easeInOut));
   }
 
@@ -88,10 +90,10 @@ class _HomeScreenState extends State<HomeScreen>
 
   Widget _buildPage() {
     switch (_currentIndex) {
-      case 0: return _DashboardPage(onGoToAlerts: _goToAlerts);
-      case 1: return const AnalyticsPage();
-      case 2: return const AlertsPage();
-      case 3: return const SettingsPage();
+      case 0:  return _DashboardPage(onGoToAlerts: _goToAlerts);
+      case 1:  return const AnalyticsPage();
+      case 2:  return const AlertsPage();
+      case 3:  return const SettingsPage();
       default: return _DashboardPage(onGoToAlerts: _goToAlerts);
     }
   }
@@ -113,11 +115,11 @@ class _HomeScreenState extends State<HomeScreen>
           builder: (_, __) => ListenableBuilder(
             listenable: _auth,
             builder: (_, __) => _Sidebar(
-              width: _sidebarWidth.value,
-              expanded: _sidebarExpanded,
+              width:        _sidebarWidth.value,
+              expanded:     _sidebarExpanded,
               currentIndex: _currentIndex,
-              navItems: _navItems,
-              user: _auth.user,
+              navItems:     _navItems,
+              user:         _auth.user,
               onTap: (i) {
                 if (i == 2) { _goToAlerts(); return; }
                 setState(() => _currentIndex = i);
@@ -129,7 +131,10 @@ class _HomeScreenState extends State<HomeScreen>
         Expanded(
           child: Column(
             children: [
-              _TopBar(title: _navItems[_currentIndex].label, onAlerts: _goToAlerts),
+              _TopBar(
+                title:    _navItems[_currentIndex].label,
+                onAlerts: _goToAlerts,
+              ),
               Expanded(child: _buildPage()),
             ],
           ),
@@ -145,7 +150,7 @@ class _HomeScreenState extends State<HomeScreen>
         Expanded(child: _buildPage()),
         _BottomNav(
           currentIndex: _currentIndex,
-          navItems: _navItems,
+          navItems:     _navItems,
           onTap: (i) {
             if (i == 2) { _goToAlerts(); return; }
             setState(() => _currentIndex = i);
@@ -160,18 +165,18 @@ class _HomeScreenState extends State<HomeScreen>
 
 class _NavItem {
   final IconData icon;
-  final String label;
+  final String   label;
   const _NavItem({required this.icon, required this.label});
 }
 
 class _Sidebar extends StatelessWidget {
-  final double width;
-  final bool expanded;
-  final int currentIndex;
+  final double        width;
+  final bool          expanded;
+  final int           currentIndex;
   final List<_NavItem> navItems;
-  final AppUser? user;
+  final AppUser?      user;
   final ValueChanged<int> onTap;
-  final VoidCallback onToggle;
+  final VoidCallback  onToggle;
 
   const _Sidebar({
     required this.width,
@@ -207,7 +212,8 @@ class _Sidebar extends StatelessWidget {
                     color: AppColors.accent,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.water_drop_rounded, color: Colors.white, size: 18),
+                  child: const Icon(Icons.water_drop_rounded,
+                      color: Colors.white, size: 18),
                 ),
                 if (expanded) ...[
                   const SizedBox(width: 10),
@@ -223,7 +229,8 @@ class _Sidebar extends StatelessWidget {
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 0.3)),
                         Text('Borehole System',
-                            style: TextStyle(color: AppColors.textSub, fontSize: 10)),
+                            style: TextStyle(
+                                color: AppColors.textSub, fontSize: 10)),
                       ],
                     ),
                   ),
@@ -231,20 +238,21 @@ class _Sidebar extends StatelessWidget {
               ],
             ),
           ),
+
           const Divider(color: AppColors.border, height: 1),
           const SizedBox(height: 8),
 
           // Nav items
           ...navItems.asMap().entries.map((e) {
-            final i = e.key;
+            final i    = e.key;
             final item = e.value;
             return _SidebarTile(
-              icon: item.icon,
-              label: item.label,
-              selected: currentIndex == i,
-              expanded: expanded,
-              onTap: () => onTap(i),
-              showBadge: i == 2,
+              icon:       item.icon,
+              label:      item.label,
+              selected:   currentIndex == i,
+              expanded:   expanded,
+              onTap:      () => onTap(i),
+              showBadge:  i == 2,
             );
           }),
 
@@ -260,22 +268,25 @@ class _Sidebar extends StatelessWidget {
               child: Row(
                 children: [
                   Icon(
-                    expanded ? Icons.chevron_left_rounded : Icons.chevron_right_rounded,
+                    expanded
+                        ? Icons.chevron_left_rounded
+                        : Icons.chevron_right_rounded,
                     color: AppColors.textSub, size: 20,
                   ),
                   if (expanded) ...[
                     const SizedBox(width: 10),
                     const Text('Collapse',
-                        style: TextStyle(color: AppColors.textSub, fontSize: 13)),
+                        style: TextStyle(
+                            color: AppColors.textSub, fontSize: 13)),
                   ],
                 ],
               ),
             ),
           ),
 
-          // User pill — shows live user data
+          // User pill
           Container(
-            margin: const EdgeInsets.all(12),
+            margin:  const EdgeInsets.all(12),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
               color: AppColors.surfaceAlt,
@@ -329,11 +340,11 @@ class _Sidebar extends StatelessWidget {
 }
 
 class _SidebarTile extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool selected;
-  final bool expanded;
-  final bool showBadge;
+  final IconData     icon;
+  final String       label;
+  final bool         selected;
+  final bool         expanded;
+  final bool         showBadge;
   final VoidCallback onTap;
 
   const _SidebarTile({
@@ -365,7 +376,8 @@ class _SidebarTile extends StatelessWidget {
           child: Row(
             children: [
               Stack(clipBehavior: Clip.none, children: [
-                Icon(icon, size: 20,
+                Icon(icon,
+                    size: 20,
                     color: selected ? AppColors.accent : AppColors.textSub),
                 if (showBadge)
                   Positioned(
@@ -373,7 +385,8 @@ class _SidebarTile extends StatelessWidget {
                     child: Container(
                       width: 8, height: 8,
                       decoration: const BoxDecoration(
-                          color: Color(0xFFFF6B6B), shape: BoxShape.circle),
+                          color: Color(0xFFFF6B6B),
+                          shape: BoxShape.circle),
                     ),
                   ),
               ]),
@@ -382,13 +395,18 @@ class _SidebarTile extends StatelessWidget {
                 Expanded(
                   child: Text(label,
                       style: TextStyle(
-                          color: selected ? AppColors.accent : AppColors.textSub,
+                          color: selected
+                              ? AppColors.accent
+                              : AppColors.textSub,
                           fontSize: 13,
-                          fontWeight: selected ? FontWeight.w600 : FontWeight.normal)),
+                          fontWeight: selected
+                              ? FontWeight.w600
+                              : FontWeight.normal)),
                 ),
                 if (showBadge)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                         color: const Color(0x33FF6B6B),
                         borderRadius: BorderRadius.circular(10)),
@@ -410,7 +428,7 @@ class _SidebarTile extends StatelessWidget {
 // ─── Top Bar ─────────────────────────────────────────────────
 
 class _TopBar extends StatelessWidget {
-  final String title;
+  final String       title;
   final VoidCallback onAlerts;
   const _TopBar({required this.title, required this.onAlerts});
 
@@ -421,7 +439,8 @@ class _TopBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       decoration: const BoxDecoration(
         color: AppColors.surface,
-        border: Border(bottom: BorderSide(color: AppColors.border, width: 1)),
+        border: Border(
+            bottom: BorderSide(color: AppColors.border, width: 1)),
       ),
       child: Row(
         children: [
@@ -446,7 +465,8 @@ class _TopBar extends StatelessWidget {
               ),
               const SizedBox(width: 6),
               const Text('Ngara Estate • Live',
-                  style: TextStyle(color: AppColors.textSub, fontSize: 12)),
+                  style: TextStyle(
+                      color: AppColors.textSub, fontSize: 12)),
             ]),
           ),
           const SizedBox(width: 12),
@@ -474,7 +494,7 @@ class _TopBar extends StatelessWidget {
 // ─── Bottom Nav ───────────────────────────────────────────────
 
 class _BottomNav extends StatelessWidget {
-  final int currentIndex;
+  final int            currentIndex;
   final List<_NavItem> navItems;
   final ValueChanged<int> onTap;
 
@@ -503,13 +523,18 @@ class _BottomNav extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(e.value.icon, size: 20,
-                          color: selected ? AppColors.accent : AppColors.textMuted),
+                      Icon(e.value.icon,
+                          size: 20,
+                          color: selected
+                              ? AppColors.accent
+                              : AppColors.textMuted),
                       const SizedBox(height: 3),
                       Text(e.value.label,
                           style: TextStyle(
                               fontSize: 10,
-                              color: selected ? AppColors.accent : AppColors.textMuted,
+                              color: selected
+                                  ? AppColors.accent
+                                  : AppColors.textMuted,
                               fontWeight: selected
                                   ? FontWeight.w600
                                   : FontWeight.normal)),
@@ -533,7 +558,8 @@ class _DashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final auth = AuthService();
+    // Use the singleton — no new instance
+    final auth = AuthService.instance;
     return ListenableBuilder(
       listenable: auth,
       builder: (context, _) {
@@ -543,7 +569,6 @@ class _DashboardPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Dynamic greeting ─────────────────────────
               Text(
                 '${_greeting()}, $firstName 👋',
                 style: const TextStyle(
