@@ -197,4 +197,8 @@ app.patch('/api/meter', authMiddleware, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log('Server running on port ' + PORT));
+// Listen on 0.0.0.0 so Android emulator can reach the server via 10.0.2.2
+app.listen(PORT, '0.0.0.0', () => {
+  console.log('Server running on port ' + PORT);
+  console.log('Listening on all interfaces - emulator can connect via 10.0.2.2:' + PORT);
+});
