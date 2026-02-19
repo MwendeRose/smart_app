@@ -28,78 +28,104 @@ class _LoginPageState extends State<LoginPage>
   bool _signupObscure   = true;
 
   String? _error;
+  bool    _googleLoading = false;
 
-  final _auth = AuthService();
+  final _auth = AuthService.instance;
 
   // ── Brand palette ─────────────────────────────────────────
-  static const kPrimary    = Color(0xFF00B4D8); // vivid sky blue
-  static const kAccent     = Color(0xFFFF6B35); // energetic orange
-  static const kSurface    = Color(0xFF0A1628); // deep navy
-  static const kCard       = Color(0xFF112240); // card navy
-  static const kBorder     = Color(0xFF1E3A5F); // subtle border
-  static const kText       = Color(0xFFE8F4FD); // near-white
-  static const kSubtext    = Color(0xFF7BAFD4); // muted blue-grey
-  static const kError      = Color(0xFFFF4757);
+  static const kPrimary = Color(0xFF00B4D8);
+  static const kAccent  = Color(0xFFFF6B35);
+  static const kSurface = Color(0xFF0A1628);
+  static const kCard    = Color(0xFF112240);
+  static const kBorder  = Color(0xFF1E3A5F);
+  static const kText    = Color(0xFFE8F4FD);
+  static const kSubtext = Color(0xFF7BAFD4);
+  static const kError   = Color(0xFFFF4757);
+  static const kSuccess = Color(0xFF00C896);
 
   @override
   void initState() {
     super.initState();
     _tabCtrl = TabController(length: 2, vsync: this);
-    _tabCtrl.addListener(() => setState(() {
-      _tab = _tabCtrl.index;
-      _error = null;
-    }));
+    _tabCtrl.addListener(() {
+      if (!_tabCtrl.indexIsChanging) return;
+      setState(() {
+        _tab  = _tabCtrl.index;
+        _error = null;
+      });
+    });
   }
 
   @override
   void dispose() {
     _tabCtrl.dispose();
-    _loginEmail.dispose(); _loginPassword.dispose();
-    _signupName.dispose(); _signupEmail.dispose();
-    _signupPhone.dispose(); _signupPassword.dispose();
+    _loginEmail.dispose();
+    _loginPassword.dispose();
+    _signupName.dispose();
+    _signupEmail.dispose();
+    _signupPhone.dispose();
+    _signupPassword.dispose();
     _signupConfirm.dispose();
     super.dispose();
   }
 
+  // ── Actions ───────────────────────────────────────────────
+
   Future<void> _doLogin() async {
-    setState(() => _error = null);
-    if (_loginEmail.text.trim().isEmpty || _loginPassword.text.isEmpty) {
+    final email    = _loginEmail.text.trim();
+    final password = _loginPassword.text;
+
+    if (email.isEmpty || password.isEmpty) {
       setState(() => _error = 'Please enter your email and password.');
       return;
     }
-    final err = await _auth.login(
-      email: _loginEmail.text.trim(),
-      password: _loginPassword.text,
-    );
+    if (!email.contains('@')) {
+      setState(() => _error = 'Please enter a valid email address.');
+      return;
+    }
+
+    setState(() => _error = null);
+    final err = await _auth.login(email: email, password: password);
     if (err != null && mounted) setState(() => _error = err);
   }
 
   Future<void> _doSignup() async {
-    setState(() => _error = null);
-    if (_signupName.text.trim().isEmpty ||
-        _signupEmail.text.trim().isEmpty ||
-        _signupPassword.text.isEmpty) {
+    final name     = _signupName.text.trim();
+    final email    = _signupEmail.text.trim();
+    final password = _signupPassword.text;
+    final confirm  = _signupConfirm.text;
+    final phone    = _signupPhone.text.trim();
+
+    if (name.isEmpty || email.isEmpty || password.isEmpty) {
       setState(() => _error = 'Name, email and password are required.');
       return;
     }
-    if (_signupPassword.text != _signupConfirm.text) {
+    if (!email.contains('@')) {
+      setState(() => _error = 'Please enter a valid email address.');
+      return;
+    }
+    if (password.length < 6) {
+      setState(() => _error = 'Password must be at least 6 characters.');
+      return;
+    }
+    if (password != confirm) {
       setState(() => _error = 'Passwords do not match.');
       return;
     }
+
+    setState(() => _error = null);
     final err = await _auth.signUp(
-      name:     _signupName.text.trim(),
-      email:    _signupEmail.text.trim(),
-      password: _signupPassword.text,
-      phone:    _signupPhone.text.trim(),
+      name: name, email: email, password: password, phone: phone,
     );
     if (err != null && mounted) setState(() => _error = err);
   }
 
   Future<void> _doGoogleSignIn() async {
-    setState(() => _error = null);
+    setState(() { _error = null; _googleLoading = true; });
     final err = await _auth.signInWithGoogle();
-    if (err != null && mounted) setState(() => _error = err);
+    if (mounted) setState(() { _googleLoading = false; _error = err; });
   }
+
   Future<void> _doForgotPassword() async {
     final emailCtrl = TextEditingController(text: _loginEmail.text.trim());
     String? sheetError;
@@ -112,265 +138,159 @@ class _LoginPageState extends State<LoginPage>
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setSheet) {
-            Future<void> send() async {
-              setSheet(() { sheetError = null; });
-              final err = await _auth.resetPassword(email: emailCtrl.text.trim());
-              if (err != null) {
-                setSheet(() => sheetError = err);
-              } else {
-                setSheet(() => sent = true);
-              }
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) {
+          Future<void> send() async {
+            setSheet(() => sheetError = null);
+            final err = await _auth.resetPassword(email: emailCtrl.text.trim());
+            if (err != null) {
+              setSheet(() => sheetError = err);
+            } else {
+              setSheet(() => sent = true);
             }
+          }
 
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 24, right: 24, top: 28,
-                bottom: MediaQuery.of(ctx).viewInsets.bottom + 28,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // ── Handle ─────────────────────────────────
+          return Padding(
+            padding: EdgeInsets.only(
+              left: 24, right: 24, top: 28,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 28,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Handle
+                Center(
+                  child: Container(
+                    width: 40, height: 4,
+                    decoration: BoxDecoration(
+                      color: kBorder,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                if (!sent) ...[
                   Center(
                     child: Container(
-                      width: 40, height: 4,
+                      width: 60, height: 60,
                       decoration: BoxDecoration(
-                        color: kBorder,
-                        borderRadius: BorderRadius.circular(2),
+                        color: kPrimary.withOpacity(0.12),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: kPrimary.withOpacity(0.3)),
                       ),
+                      child: const Icon(Icons.lock_reset_rounded,
+                          color: kPrimary, size: 28),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Forgot Password?',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: kText, fontSize: 20, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Enter your email and we\'ll send you a link to reset your password.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: kSubtext, fontSize: 13, height: 1.5),
+                  ),
+                  const SizedBox(height: 24),
+
+                  if (sheetError != null) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: kError.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: kError.withOpacity(0.4)),
+                      ),
+                      child: Row(children: [
+                        const Icon(Icons.error_outline, color: kError, size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(sheetError!,
+                              style: const TextStyle(color: kError, fontSize: 12)),
+                        ),
+                      ]),
+                    ),
+                    const SizedBox(height: 14),
+                  ],
+
+                  // Email field
+                  _SheetField(controller: emailCtrl),
+                  const SizedBox(height: 20),
+
+                  // Send button
+                  ListenableBuilder(
+                    listenable: _auth,
+                    builder: (_, _) => _GradientButton(
+                      label: 'Send Reset Link',
+                      loading: _auth.loading,
+                      onPressed: send,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Cancel',
+                        style: TextStyle(color: kSubtext, fontSize: 13)),
+                  ),
+                ] else ...[
+                  // Success
+                  Center(
+                    child: Container(
+                      width: 72, height: 72,
+                      decoration: BoxDecoration(
+                        color: kSuccess.withOpacity(0.12),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: kSuccess.withOpacity(0.4), width: 2),
+                      ),
+                      child: const Icon(Icons.mark_email_read_rounded,
+                          color: kSuccess, size: 34),
                     ),
                   ),
                   const SizedBox(height: 20),
-
-                  if (!sent) ...[
-                    // ── Icon ───────────────────────────────────
-                    Center(
-                      child: Container(
-                        width: 60, height: 60,
-                        decoration: BoxDecoration(
-                          color: kPrimary.withOpacity(0.12),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: kPrimary.withOpacity(0.3)),
-                        ),
-                        child: const Icon(Icons.lock_reset_rounded,
-                            color: kPrimary, size: 28),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    const Text(
-                      'Forgot Password?',
+                  const Text('Check your inbox!',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                          color: kText,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800),
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'Enter your email and we\'ll send you a link to reset your password.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: kSubtext, fontSize: 13, height: 1.5),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // ── Error ──────────────────────────────────
-                    if (sheetError != null) ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: kError.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: kError.withOpacity(0.4)),
-                        ),
-                        child: Row(children: [
-                          const Icon(Icons.error_outline,
-                              color: kError, size: 16),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(sheetError!,
-                                style: const TextStyle(
-                                    color: kError, fontSize: 12)),
-                          ),
-                        ]),
-                      ),
-                      const SizedBox(height: 14),
-                    ],
-
-                    // ── Email field ────────────────────────────
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Email Address',
-                            style: TextStyle(
-                                color: kSubtext,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600)),
-                        const SizedBox(height: 7),
-                        TextField(
-                          controller: emailCtrl,
-                          keyboardType: TextInputType.emailAddress,
-                          style: const TextStyle(color: kText, fontSize: 14),
-                          decoration: InputDecoration(
-                            hintText: 'you@example.com',
-                            hintStyle: const TextStyle(
-                                color: Color(0xFF3D5A7A), fontSize: 13),
-                            prefixIcon: const Icon(Icons.email_outlined,
-                                color: kSubtext, size: 18),
-                            filled: true,
-                            fillColor: kSurface,
-                            contentPadding:
-                                const EdgeInsets.symmetric(vertical: 14),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: kBorder),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: kBorder),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide:
-                                  const BorderSide(color: kPrimary, width: 2),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-
-                    // ── Send button ────────────────────────────
-                    ListenableBuilder(
-                      listenable: _auth,
-                      builder: (_, __) => SizedBox(
-                        height: 50,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: _auth.loading
-                                ? null
-                                : const LinearGradient(
-                                    colors: [kPrimary, Color(0xFF0077B6)],
-                                  ),
-                            color: _auth.loading
-                                ? kPrimary.withOpacity(0.3)
-                                : null,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: _auth.loading
-                                ? []
-                                : [
-                                    BoxShadow(
-                                      color: kPrimary.withOpacity(0.4),
-                                      blurRadius: 16,
-                                      offset: const Offset(0, 5),
-                                    ),
-                                  ],
-                          ),
-                          child: ElevatedButton(
-                            onPressed: _auth.loading ? null : send,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              shadowColor: Colors.transparent,
-                              disabledBackgroundColor: Colors.transparent,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12)),
-                              elevation: 0,
-                            ),
-                            child: _auth.loading
-                                ? const SizedBox(
-                                    width: 22, height: 22,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2.5,
-                                        color: Colors.white),
-                                  )
-                                : const Text('Send Reset Link',
-                                    style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 15)),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // ── Cancel ─────────────────────────────────
-                    TextButton(
+                      style: TextStyle(color: kText, fontSize: 20, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 8),
+                  Text(
+                    'A password reset link has been sent to\n${emailCtrl.text.trim()}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: kSubtext, fontSize: 13, height: 1.5),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Check your spam folder if you don\'t see it within a minute.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Color(0xFF4A7A9B), fontSize: 11),
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    height: 48,
+                    child: ElevatedButton(
                       onPressed: () => Navigator.pop(ctx),
-                      child: const Text('Cancel',
-                          style: TextStyle(color: kSubtext, fontSize: 13)),
-                    ),
-                  ] else ...[
-                    // ── Success state ──────────────────────────
-                    Center(
-                      child: Container(
-                        width: 72, height: 72,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF00C896).withOpacity(0.12),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                              color: const Color(0xFF00C896).withOpacity(0.4),
-                              width: 2),
-                        ),
-                        child: const Icon(Icons.mark_email_read_rounded,
-                            color: Color(0xFF00C896), size: 34),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: kPrimary.withOpacity(0.15),
+                        foregroundColor: kPrimary,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
                       ),
+                      child: const Text('Back to Sign In',
+                          style: TextStyle(fontWeight: FontWeight.w700)),
                     ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Check your inbox!',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          color: kText,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'A password reset link has been sent to\n${emailCtrl.text.trim()}',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          color: kSubtext, fontSize: 13, height: 1.5),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Check your spam folder if you don\'t see it within a minute.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          color: Color(0xFF4A7A9B), fontSize: 11),
-                    ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      height: 48,
-                      child: ElevatedButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: kPrimary.withOpacity(0.15),
-                          foregroundColor: kPrimary,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                          elevation: 0,
-                        ),
-                        child: const Text('Back to Sign In',
-                            style: TextStyle(fontWeight: FontWeight.w700)),
-                      ),
-                    ),
-                  ],
+                  ),
                 ],
-              ),
-            );
-          },
-        );
-      },
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
-
+  // ── Build ─────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -378,24 +298,13 @@ class _LoginPageState extends State<LoginPage>
       backgroundColor: kSurface,
       body: Stack(
         children: [
-          // ── Decorative background blobs ───────────────────
-          Positioned(
-            top: -80,
-            right: -80,
-            child: _Blob(color: kPrimary.withOpacity(0.18), size: 280),
-          ),
-          Positioned(
-            bottom: -60,
-            left: -60,
-            child: _Blob(color: kAccent.withOpacity(0.12), size: 220),
-          ),
-          Positioned(
-            top: 200,
-            left: -40,
-            child: _Blob(color: kPrimary.withOpacity(0.08), size: 160),
-          ),
+          Positioned(top: -80, right: -80,
+              child: _Blob(color: kPrimary.withOpacity(0.18), size: 280)),
+          Positioned(bottom: -60, left: -60,
+              child: _Blob(color: kAccent.withOpacity(0.12), size: 220)),
+          Positioned(top: 200, left: -40,
+              child: _Blob(color: kPrimary.withOpacity(0.08), size: 160)),
 
-          // ── Main content ──────────────────────────────────
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
@@ -425,7 +334,9 @@ class _LoginPageState extends State<LoginPage>
                             child: child,
                           ),
                         ),
-                        child: _tab == 0 ? _loginForm() : _signupForm(),
+                        child: _tab == 0
+                            ? _loginForm()
+                            : _signupForm(),
                       ),
                     ],
                   ),
@@ -442,17 +353,14 @@ class _LoginPageState extends State<LoginPage>
     return Center(
       child: Column(
         children: [
-          // ── Logo from assets ───────────────────────────────
           Container(
-            width: 90,
-            height: 90,
+            width: 90, height: 90,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
               boxShadow: [
                 BoxShadow(
                   color: kPrimary.withOpacity(0.35),
-                  blurRadius: 32,
-                  spreadRadius: 4,
+                  blurRadius: 32, spreadRadius: 4,
                 ),
               ],
             ),
@@ -501,7 +409,11 @@ class _LoginPageState extends State<LoginPage>
             ),
             child: const Text(
               'Borehole Monitoring System',
-              style: TextStyle(color: kAccent, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.5),
+              style: TextStyle(
+                  color: kAccent,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5),
             ),
           ),
         ],
@@ -520,16 +432,10 @@ class _LoginPageState extends State<LoginPage>
       child: TabBar(
         controller: _tabCtrl,
         indicator: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [kPrimary, Color(0xFF0077B6)],
-          ),
+          gradient: const LinearGradient(colors: [kPrimary, Color(0xFF0077B6)]),
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
-            BoxShadow(
-              color: kPrimary.withOpacity(0.4),
-              blurRadius: 12,
-              spreadRadius: 0,
-            ),
+            BoxShadow(color: kPrimary.withOpacity(0.4), blurRadius: 12),
           ],
         ),
         labelColor: Colors.white,
@@ -553,8 +459,14 @@ class _LoginPageState extends State<LoginPage>
         const Icon(Icons.error_outline, color: kError, size: 16),
         const SizedBox(width: 8),
         Expanded(
-          child: Text(_error!,
-              style: const TextStyle(color: kError, fontSize: 12)),
+          child: Text(
+            _error!,
+            style: const TextStyle(color: kError, fontSize: 12),
+          ),
+        ),
+        GestureDetector(
+          onTap: () => setState(() => _error = null),
+          child: const Icon(Icons.close, color: kError, size: 16),
         ),
       ]),
     );
@@ -581,7 +493,9 @@ class _LoginPageState extends State<LoginPage>
           obscure: _loginObscure,
           suffix: IconButton(
             icon: Icon(
-              _loginObscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+              _loginObscure
+                  ? Icons.visibility_off_outlined
+                  : Icons.visibility_outlined,
               color: kSubtext, size: 18,
             ),
             onPressed: () => setState(() => _loginObscure = !_loginObscure),
@@ -604,10 +518,10 @@ class _LoginPageState extends State<LoginPage>
             onPressed: _doLogin,
           ),
         ),
+        const SizedBox(height: 20),
+        const _OrDivider(),
         const SizedBox(height: 16),
-        _OrDivider(),
-        const SizedBox(height: 16),
-        _GoogleButton(onPressed: _doGoogleSignIn),
+        _GoogleButton(loading: _googleLoading, onPressed: _doGoogleSignIn),
         const SizedBox(height: 20),
         Center(
           child: GestureDetector(
@@ -617,7 +531,10 @@ class _LoginPageState extends State<LoginPage>
                 text: "Don't have an account? ",
                 style: TextStyle(color: kSubtext, fontSize: 13),
                 children: [
-                  TextSpan(text: 'Sign Up', style: TextStyle(color: kPrimary, fontWeight: FontWeight.w700)),
+                  TextSpan(
+                    text: 'Sign Up',
+                    style: TextStyle(color: kPrimary, fontWeight: FontWeight.w700),
+                  ),
                 ],
               ),
             ),
@@ -663,7 +580,9 @@ class _LoginPageState extends State<LoginPage>
           obscure: _signupObscure,
           suffix: IconButton(
             icon: Icon(
-              _signupObscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+              _signupObscure
+                  ? Icons.visibility_off_outlined
+                  : Icons.visibility_outlined,
               color: kSubtext, size: 18,
             ),
             onPressed: () => setState(() => _signupObscure = !_signupObscure),
@@ -686,10 +605,10 @@ class _LoginPageState extends State<LoginPage>
             onPressed: _doSignup,
           ),
         ),
+        const SizedBox(height: 20),
+        const _OrDivider(),
         const SizedBox(height: 16),
-        _OrDivider(),
-        const SizedBox(height: 16),
-        _GoogleButton(onPressed: _doGoogleSignIn),
+        _GoogleButton(loading: _googleLoading, onPressed: _doGoogleSignIn),
         const SizedBox(height: 20),
         Center(
           child: GestureDetector(
@@ -699,7 +618,10 @@ class _LoginPageState extends State<LoginPage>
                 text: 'Already have an account? ',
                 style: TextStyle(color: kSubtext, fontSize: 13),
                 children: [
-                  TextSpan(text: 'Sign In', style: TextStyle(color: kPrimary, fontWeight: FontWeight.w700)),
+                  TextSpan(
+                    text: 'Sign In',
+                    style: TextStyle(color: kPrimary, fontWeight: FontWeight.w700),
+                  ),
                 ],
               ),
             ),
@@ -720,12 +642,8 @@ class _Blob extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: color,
-        shape: BoxShape.circle,
-      ),
+      width: size, height: size,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
     );
   }
 }
@@ -733,16 +651,21 @@ class _Blob extends StatelessWidget {
 // ── Or divider ────────────────────────────────────────────────
 
 class _OrDivider extends StatelessWidget {
+  const _OrDivider();
+
   @override
   Widget build(BuildContext context) {
     return Row(children: [
-      Expanded(child: Divider(color: _LoginPageState.kBorder, thickness: 1)),
+      const Expanded(
+          child: Divider(color: _LoginPageState.kBorder, thickness: 1)),
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12),
         child: Text('or continue with',
-            style: TextStyle(color: _LoginPageState.kSubtext, fontSize: 11)),
+            style: const TextStyle(
+                color: _LoginPageState.kSubtext, fontSize: 11)),
       ),
-      Expanded(child: Divider(color: _LoginPageState.kBorder, thickness: 1)),
+      const Expanded(
+          child: Divider(color: _LoginPageState.kBorder, thickness: 1)),
     ]);
   }
 }
@@ -751,55 +674,62 @@ class _OrDivider extends StatelessWidget {
 
 class _GoogleButton extends StatelessWidget {
   final VoidCallback onPressed;
-  const _GoogleButton({required this.onPressed});
+  final bool loading;
+  const _GoogleButton({required this.onPressed, this.loading = false});
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 48,
+      height: 50,
       child: OutlinedButton(
-        onPressed: onPressed,
+        onPressed: loading ? null : onPressed,
         style: OutlinedButton.styleFrom(
           backgroundColor: _LoginPageState.kCard,
           side: const BorderSide(color: _LoginPageState.kBorder, width: 1.5),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          disabledBackgroundColor: _LoginPageState.kCard,
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Google "G" logo using colored text (no package needed)
-            Container(
-              width: 22,
-              height: 22,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white,
-              ),
-              child: Center(
-                child: Text(
-                  'G',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                    foreground: Paint()
-                      ..shader = const LinearGradient(
-                        colors: [Color(0xFF4285F4), Color(0xFF34A853)],
-                      ).createShader(const Rect.fromLTWH(0, 0, 22, 22)),
+        child: loading
+            ? const SizedBox(
+                width: 22, height: 22,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2.5, color: _LoginPageState.kPrimary),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 22, height: 22,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white,
+                    ),
+                    child: Center(
+                      child: Text(
+                        'G',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                          foreground: Paint()
+                            ..shader = const LinearGradient(
+                              colors: [Color(0xFF4285F4), Color(0xFF34A853)],
+                            ).createShader(
+                                const Rect.fromLTWH(0, 0, 22, 22)),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'Continue with Google',
+                    style: TextStyle(
+                      color: _LoginPageState.kText,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(width: 10),
-            const Text(
-              'Continue with Google',
-              style: TextStyle(
-                color: _LoginPageState.kText,
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -846,22 +776,78 @@ class _Field extends StatelessWidget {
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: const TextStyle(color: Color(0xFF3D5A7A), fontSize: 13),
-            prefixIcon: Icon(icon, color: _LoginPageState.kSubtext, size: 18),
+            prefixIcon:
+                Icon(icon, color: _LoginPageState.kSubtext, size: 18),
             suffixIcon: suffix,
             filled: true,
             fillColor: _LoginPageState.kCard,
             contentPadding: const EdgeInsets.symmetric(vertical: 14),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: _LoginPageState.kBorder),
+              borderSide:
+                  const BorderSide(color: _LoginPageState.kBorder),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: _LoginPageState.kBorder),
+              borderSide:
+                  const BorderSide(color: _LoginPageState.kBorder),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: _LoginPageState.kPrimary, width: 2),
+              borderSide: const BorderSide(
+                  color: _LoginPageState.kPrimary, width: 2),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Sheet email field (for forgot password modal) ─────────────
+
+class _SheetField extends StatelessWidget {
+  final TextEditingController controller;
+  const _SheetField({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Email Address',
+            style: TextStyle(
+                color: _LoginPageState.kSubtext,
+                fontSize: 12,
+                fontWeight: FontWeight.w600)),
+        const SizedBox(height: 7),
+        TextField(
+          controller: controller,
+          keyboardType: TextInputType.emailAddress,
+          style: const TextStyle(color: _LoginPageState.kText, fontSize: 14),
+          decoration: InputDecoration(
+            hintText: 'you@example.com',
+            hintStyle: const TextStyle(
+                color: Color(0xFF3D5A7A), fontSize: 13),
+            prefixIcon: const Icon(Icons.email_outlined,
+                color: _LoginPageState.kSubtext, size: 18),
+            filled: true,
+            fillColor: _LoginPageState.kSurface,
+            contentPadding: const EdgeInsets.symmetric(vertical: 14),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide:
+                  const BorderSide(color: _LoginPageState.kBorder),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide:
+                  const BorderSide(color: _LoginPageState.kBorder),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(
+                  color: _LoginPageState.kPrimary, width: 2),
             ),
           ),
         ),
@@ -896,7 +882,9 @@ class _GradientButton extends StatelessWidget {
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
                 ),
-          color: loading ? _LoginPageState.kPrimary.withOpacity(0.3) : null,
+          color: loading
+              ? _LoginPageState.kPrimary.withOpacity(0.3)
+              : null,
           borderRadius: BorderRadius.circular(12),
           boxShadow: loading
               ? []
@@ -914,13 +902,15 @@ class _GradientButton extends StatelessWidget {
             backgroundColor: Colors.transparent,
             shadowColor: Colors.transparent,
             disabledBackgroundColor: Colors.transparent,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
             elevation: 0,
           ),
           child: loading
               ? const SizedBox(
                   width: 22, height: 22,
-                  child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2.5, color: Colors.white),
                 )
               : Text(label,
                   style: const TextStyle(

@@ -1,13 +1,23 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:smart_app/screens/firebase_options.dart';
+// ignore: unused_import
 import 'services/auth_service.dart';
 import 'screens/login_page.dart';
 import 'screens/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // ✅ Initialize Firebase FIRST before anything else
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   // Restore saved session before first frame
   await AuthService.instance.init();
+
   runApp(const MajiSmartApp());
 }
 
@@ -17,7 +27,7 @@ class MajiSmartApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Maji Smart',
+      title: 'Smart_meter_app',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
@@ -25,7 +35,7 @@ class MajiSmartApp extends StatelessWidget {
           seedColor: const Color(0xFF2DD4BF),
           brightness: Brightness.dark,
         ),
-        fontFamily: 'Inter', // optional — remove if not configured
+        fontFamily: 'Inter',
       ),
       home: const _AuthGate(),
     );
