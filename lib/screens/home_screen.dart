@@ -1,6 +1,8 @@
+// lib/screens/home_screen.dart
 // ignore_for_file: unnecessary_underscores, deprecated_member_use
 
 import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
 import '../widgets/borehole_system_card.dart';
 import '../widgets/water_meter_card.dart';
 import '../widgets/stats_row.dart';
@@ -11,20 +13,29 @@ import 'settings.dart';
 import 'alerts_page.dart';
 
 // ─── Design Tokens ───────────────────────────────────────────
-// Deep navy/slate dark theme with teal accent
 class AppColors {
-  static const bg          = Color(0xFF0D1117); // deep charcoal
-  static const surface     = Color(0xFF161B22); // card surface
-  static const surfaceAlt  = Color(0xFF1C2333); // slightly lighter
-  static const border      = Color(0xFF30363D); // subtle borders
-  static const accent      = Color(0xFF2DD4BF); // teal accent
-  static const accentSoft  = Color(0x262DD4BF); // teal 15% opacity
-  static const textPrimary = Color(0xFFE6EDF3); // near-white
-  static const textSub     = Color(0xFF8B949E); // muted grey
-  static const textMuted   = Color(0xFF484F58); // very muted
-  static const sidebarW    = 220.0;
-  static const sidebarCollapsedW = 64.0;
+  static const bg          = Color(0xFF0D1117);
+  static const surface     = Color(0xFF161B22);
+  static const surfaceAlt  = Color(0xFF1C2333);
+  static const border      = Color(0xFF30363D);
+  static const accent      = Color(0xFF2DD4BF);
+  static const accentSoft  = Color(0x262DD4BF);
+  static const textPrimary = Color(0xFFE6EDF3);
+  static const textSub     = Color(0xFF8B949E);
+  static const textMuted   = Color(0xFF484F58);
+  static const sidebarW           = 220.0;
+  static const sidebarCollapsedW  = 64.0;
 }
+
+// ─── Greeting helper ─────────────────────────────────────────
+String _greeting() {
+  final hour = DateTime.now().hour;
+  if (hour < 12) return 'Good Morning';
+  if (hour < 17) return 'Good Afternoon';
+  return 'Good Evening';
+}
+
+// ─────────────────────────────────────────────────────────────
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -39,11 +50,13 @@ class _HomeScreenState extends State<HomeScreen>
   late AnimationController _sidebarAnim;
   late Animation<double> _sidebarWidth;
 
+  final _auth = AuthService();
+
   final List<_NavItem> _navItems = const [
-    _NavItem(icon: Icons.dashboard_rounded,      label: 'Dashboard'),
-    _NavItem(icon: Icons.bar_chart_rounded,       label: 'Analytics'),
-    _NavItem(icon: Icons.notifications_rounded,   label: 'Alerts'),
-    _NavItem(icon: Icons.tune_rounded,            label: 'Settings'),
+    _NavItem(icon: Icons.dashboard_rounded,    label: 'Dashboard'),
+    _NavItem(icon: Icons.bar_chart_rounded,    label: 'Analytics'),
+    _NavItem(icon: Icons.notifications_rounded, label: 'Alerts'),
+    _NavItem(icon: Icons.tune_rounded,          label: 'Settings'),
   ];
 
   @override
@@ -71,9 +84,7 @@ class _HomeScreenState extends State<HomeScreen>
     _sidebarExpanded ? _sidebarAnim.forward() : _sidebarAnim.reverse();
   }
 
-  void _goToAlerts() {
-    setState(() => _currentIndex = 2);
-  }
+  void _goToAlerts() => setState(() => _currentIndex = 2);
 
   Widget _buildPage() {
     switch (_currentIndex) {
@@ -88,38 +99,37 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   Widget build(BuildContext context) {
     final isWide = MediaQuery.of(context).size.width > 720;
-
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: isWide ? _wideLayout() : _narrowLayout(),
     );
   }
 
-  // ── Wide layout: sidebar + content ──
   Widget _wideLayout() {
     return Row(
       children: [
         AnimatedBuilder(
           animation: _sidebarWidth,
-          builder: (_, __) => _Sidebar(
-            width: _sidebarWidth.value,
-            expanded: _sidebarExpanded,
-            currentIndex: _currentIndex,
-            navItems: _navItems,
-            onTap: (i) {
-              if (i == 2) { _goToAlerts(); return; }
-              setState(() => _currentIndex = i);
-            },
-            onToggle: _toggleSidebar,
+          builder: (_, __) => ListenableBuilder(
+            listenable: _auth,
+            builder: (_, __) => _Sidebar(
+              width: _sidebarWidth.value,
+              expanded: _sidebarExpanded,
+              currentIndex: _currentIndex,
+              navItems: _navItems,
+              user: _auth.user,
+              onTap: (i) {
+                if (i == 2) { _goToAlerts(); return; }
+                setState(() => _currentIndex = i);
+              },
+              onToggle: _toggleSidebar,
+            ),
           ),
         ),
         Expanded(
           child: Column(
             children: [
-              _TopBar(
-                title: _navItems[_currentIndex].label,
-                onAlerts: _goToAlerts,
-              ),
+              _TopBar(title: _navItems[_currentIndex].label, onAlerts: _goToAlerts),
               Expanded(child: _buildPage()),
             ],
           ),
@@ -128,14 +138,10 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // ── Narrow layout: bottom nav ──
   Widget _narrowLayout() {
     return Column(
       children: [
-        _TopBar(
-          title: _navItems[_currentIndex].label,
-          onAlerts: _goToAlerts,
-        ),
+        _TopBar(title: _navItems[_currentIndex].label, onAlerts: _goToAlerts),
         Expanded(child: _buildPage()),
         _BottomNav(
           currentIndex: _currentIndex,
@@ -163,6 +169,7 @@ class _Sidebar extends StatelessWidget {
   final bool expanded;
   final int currentIndex;
   final List<_NavItem> navItems;
+  final AppUser? user;
   final ValueChanged<int> onTap;
   final VoidCallback onToggle;
 
@@ -171,6 +178,7 @@ class _Sidebar extends StatelessWidget {
     required this.expanded,
     required this.currentIndex,
     required this.navItems,
+    required this.user,
     required this.onTap,
     required this.onToggle,
   });
@@ -187,21 +195,19 @@ class _Sidebar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Logo area
+          // Logo
           Container(
             height: 64,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
                 Container(
-                  width: 32,
-                  height: 32,
+                  width: 32, height: 32,
                   decoration: BoxDecoration(
                     color: AppColors.accent,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.water_drop_rounded,
-                      color: Colors.white, size: 18),
+                  child: const Icon(Icons.water_drop_rounded, color: Colors.white, size: 18),
                 ),
                 if (expanded) ...[
                   const SizedBox(width: 10),
@@ -212,14 +218,12 @@ class _Sidebar extends StatelessWidget {
                       children: [
                         Text('Maji Smart',
                             style: TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.3,
-                            )),
+                                color: AppColors.textPrimary,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.3)),
                         Text('Borehole System',
-                            style: TextStyle(
-                                color: AppColors.textSub, fontSize: 10)),
+                            style: TextStyle(color: AppColors.textSub, fontSize: 10)),
                       ],
                     ),
                   ),
@@ -227,7 +231,6 @@ class _Sidebar extends StatelessWidget {
               ],
             ),
           ),
-
           const Divider(color: AppColors.border, height: 1),
           const SizedBox(height: 8),
 
@@ -235,11 +238,10 @@ class _Sidebar extends StatelessWidget {
           ...navItems.asMap().entries.map((e) {
             final i = e.key;
             final item = e.value;
-            final selected = currentIndex == i;
             return _SidebarTile(
               icon: item.icon,
               label: item.label,
-              selected: selected,
+              selected: currentIndex == i,
               expanded: expanded,
               onTap: () => onTap(i),
               showBadge: i == 2,
@@ -258,24 +260,20 @@ class _Sidebar extends StatelessWidget {
               child: Row(
                 children: [
                   Icon(
-                    expanded
-                        ? Icons.chevron_left_rounded
-                        : Icons.chevron_right_rounded,
-                    color: AppColors.textSub,
-                    size: 20,
+                    expanded ? Icons.chevron_left_rounded : Icons.chevron_right_rounded,
+                    color: AppColors.textSub, size: 20,
                   ),
                   if (expanded) ...[
                     const SizedBox(width: 10),
                     const Text('Collapse',
-                        style: TextStyle(
-                            color: AppColors.textSub, fontSize: 13)),
+                        style: TextStyle(color: AppColors.textSub, fontSize: 13)),
                   ],
                 ],
               ),
             ),
           ),
 
-          // User pill
+          // User pill — shows live user data
           Container(
             margin: const EdgeInsets.all(12),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -289,26 +287,34 @@ class _Sidebar extends StatelessWidget {
                 CircleAvatar(
                   radius: 14,
                   backgroundColor: AppColors.accentSoft,
-                  child: const Text('JK',
-                      style: TextStyle(
-                          color: AppColors.accent,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold)),
+                  child: Text(
+                    user?.initials ?? '?',
+                    style: const TextStyle(
+                        color: AppColors.accent,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold),
+                  ),
                 ),
                 if (expanded) ...[
                   const SizedBox(width: 8),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('John Kamau',
-                            style: TextStyle(
-                                color: AppColors.textPrimary,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600)),
-                        Text('Admin',
-                            style: TextStyle(
-                                color: AppColors.textSub, fontSize: 10)),
+                        Text(
+                          user?.name ?? 'Loading...',
+                          style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          user?.role ?? '',
+                          style: const TextStyle(
+                              color: AppColors.textSub, fontSize: 10),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ],
                     ),
                   ),
@@ -358,53 +364,34 @@ class _SidebarTile extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Icon(icon,
-                      size: 20,
-                      color: selected
-                          ? AppColors.accent
-                          : AppColors.textSub),
-                  if (showBadge)
-                    Positioned(
-                      top: -4,
-                      right: -4,
-                      child: Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFFF6B6B),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
+              Stack(clipBehavior: Clip.none, children: [
+                Icon(icon, size: 20,
+                    color: selected ? AppColors.accent : AppColors.textSub),
+                if (showBadge)
+                  Positioned(
+                    top: -4, right: -4,
+                    child: Container(
+                      width: 8, height: 8,
+                      decoration: const BoxDecoration(
+                          color: Color(0xFFFF6B6B), shape: BoxShape.circle),
                     ),
-                ],
-              ),
+                  ),
+              ]),
               if (expanded) ...[
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      color: selected
-                          ? AppColors.accent
-                          : AppColors.textSub,
-                      fontSize: 13,
-                      fontWeight: selected
-                          ? FontWeight.w600
-                          : FontWeight.normal,
-                    ),
-                  ),
+                  child: Text(label,
+                      style: TextStyle(
+                          color: selected ? AppColors.accent : AppColors.textSub,
+                          fontSize: 13,
+                          fontWeight: selected ? FontWeight.w600 : FontWeight.normal)),
                 ),
                 if (showBadge)
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: const Color(0x33FF6B6B),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+                        color: const Color(0x33FF6B6B),
+                        borderRadius: BorderRadius.circular(10)),
                     child: const Text('3',
                         style: TextStyle(
                             color: Color(0xFFFF6B6B),
@@ -425,7 +412,6 @@ class _SidebarTile extends StatelessWidget {
 class _TopBar extends StatelessWidget {
   final String title;
   final VoidCallback onAlerts;
-
   const _TopBar({required this.title, required this.onAlerts});
 
   @override
@@ -439,16 +425,12 @@ class _TopBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          Text(title,
+              style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600)),
           const Spacer(),
-          // Greeting chip
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
@@ -456,55 +438,40 @@ class _TopBar extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: AppColors.border),
             ),
-            child: Row(
-              children: [
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF3FB950),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                const Text(
-                  'Ngara Estate • Live',
-                  style: TextStyle(color: AppColors.textSub, fontSize: 12),
-                ),
-              ],
-            ),
+            child: Row(children: [
+              Container(
+                width: 6, height: 6,
+                decoration: const BoxDecoration(
+                    color: Color(0xFF3FB950), shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 6),
+              const Text('Ngara Estate • Live',
+                  style: TextStyle(color: AppColors.textSub, fontSize: 12)),
+            ]),
           ),
           const SizedBox(width: 12),
-          // Alerts bell
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.notifications_outlined,
-                    color: AppColors.textSub, size: 20),
-                onPressed: onAlerts,
+          Stack(clipBehavior: Clip.none, children: [
+            IconButton(
+              icon: const Icon(Icons.notifications_outlined,
+                  color: AppColors.textSub, size: 20),
+              onPressed: onAlerts,
+            ),
+            Positioned(
+              top: 8, right: 8,
+              child: Container(
+                width: 8, height: 8,
+                decoration: const BoxDecoration(
+                    color: Color(0xFFFF6B6B), shape: BoxShape.circle),
               ),
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFF6B6B),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ]),
         ],
       ),
     );
   }
 }
 
-// ─── Bottom Nav (narrow screens) ─────────────────────────────
+// ─── Bottom Nav ───────────────────────────────────────────────
 
 class _BottomNav extends StatelessWidget {
   final int currentIndex;
@@ -536,22 +503,16 @@ class _BottomNav extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(e.value.icon,
-                          size: 20,
-                          color: selected
-                              ? AppColors.accent
-                              : AppColors.textMuted),
+                      Icon(e.value.icon, size: 20,
+                          color: selected ? AppColors.accent : AppColors.textMuted),
                       const SizedBox(height: 3),
                       Text(e.value.label,
                           style: TextStyle(
-                            fontSize: 10,
-                            color: selected
-                                ? AppColors.accent
-                                : AppColors.textMuted,
-                            fontWeight: selected
-                                ? FontWeight.w600
-                                : FontWeight.normal,
-                          )),
+                              fontSize: 10,
+                              color: selected ? AppColors.accent : AppColors.textMuted,
+                              fontWeight: selected
+                                  ? FontWeight.w600
+                                  : FontWeight.normal)),
                     ],
                   ),
                 ),
@@ -564,7 +525,7 @@ class _BottomNav extends StatelessWidget {
   }
 }
 
-// ─── Dashboard Page ──────────────────────────────────────────
+// ─── Dashboard Page ───────────────────────────────────────────
 
 class _DashboardPage extends StatelessWidget {
   final VoidCallback? onGoToAlerts;
@@ -572,37 +533,44 @@ class _DashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Good Afternoon, John',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-            ),
+    final auth = AuthService();
+    return ListenableBuilder(
+      listenable: auth,
+      builder: (context, _) {
+        final firstName = auth.user?.firstName ?? 'there';
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Dynamic greeting ─────────────────────────
+              Text(
+                '${_greeting()}, $firstName 👋',
+                style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 2),
+              const Text(
+                "Here's your borehole system overview for today.",
+                style: TextStyle(color: AppColors.textSub, fontSize: 13),
+              ),
+              const SizedBox(height: 20),
+              const BoreholeSystemCard(),
+              const SizedBox(height: 16),
+              const WaterMeterCard(),
+              const SizedBox(height: 16),
+              const StatsRow(),
+              const SizedBox(height: 16),
+              CriticalAlertCard(onViewDetails: onGoToAlerts),
+              const SizedBox(height: 16),
+              const SubMetersGrid(),
+              const SizedBox(height: 20),
+            ],
           ),
-          const SizedBox(height: 2),
-          const Text(
-            'Here\'s your borehole system overview for today.',
-            style: TextStyle(color: AppColors.textSub, fontSize: 13),
-          ),
-          const SizedBox(height: 20),
-          const BoreholeSystemCard(),
-          const SizedBox(height: 16),
-          const WaterMeterCard(),
-          const SizedBox(height: 16),
-          const StatsRow(),
-          const SizedBox(height: 16),
-          CriticalAlertCard(onViewDetails: onGoToAlerts),
-          const SizedBox(height: 16),
-          const SubMetersGrid(),
-          const SizedBox(height: 20),
-        ],
-      ),
+        );
+      },
     );
   }
 }

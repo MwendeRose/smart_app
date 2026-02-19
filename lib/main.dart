@@ -1,7 +1,13 @@
+// lib/main.dart
 import 'package:flutter/material.dart';
+import 'services/auth_service.dart';
+import 'screens/login_page.dart';
 import 'screens/home_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Restore saved session before first frame
+  await AuthService().init();
   runApp(const MajiSmartApp());
 }
 
@@ -14,15 +20,32 @@ class MajiSmartApp extends StatelessWidget {
       title: 'Maji Smart',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1565C0),
-          brightness: Brightness.light,
-        ),
-        scaffoldBackgroundColor: const Color(0xFFEEF2F7),
-        fontFamily: 'Roboto',
         useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF2DD4BF),
+          brightness: Brightness.dark,
+        ),
+        fontFamily: 'Inter', // optional — remove if not configured
       ),
-      home: const HomeScreen(),
+      home: const _AuthGate(),
+    );
+  }
+}
+
+/// Listens to AuthService and swaps between LoginPage and HomeScreen.
+class _AuthGate extends StatelessWidget {
+  const _AuthGate();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: AuthService(),
+      builder: (context, _) {
+        final auth = AuthService();
+        return auth.isLoggedIn
+            ? const HomeScreen()
+            : const LoginPage();
+      },
     );
   }
 }
