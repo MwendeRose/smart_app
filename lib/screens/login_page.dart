@@ -1,5 +1,5 @@
 // lib/screens/login_page.dart
-// ignore_for_file: deprecated_member_use, unnecessary_underscores
+// ignore_for_file: deprecated_member_use, unnecessary_underscores, unused_field, duplicate_ignore, curly_braces_in_flow_control_structures
 
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
@@ -11,93 +11,73 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage>
-    with SingleTickerProviderStateMixin {
-  int _tab = 0;
-  late TabController _tabCtrl;
+class _LoginPageState extends State<LoginPage> {
+  int _mode = 0; // 0 = Sign In, 1 = Sign Up
 
   final _loginEmail    = TextEditingController();
   final _loginPassword = TextEditingController();
   bool _loginObscure   = true;
 
-  final _signupName     = TextEditingController();
-  final _signupEmail    = TextEditingController();
-  final _signupPhone    = TextEditingController();
-  final _signupPassword = TextEditingController();
-  final _signupConfirm  = TextEditingController();
-  bool _signupObscure   = true;
+  final _signupFirstName = TextEditingController();
+  final _signupLastName  = TextEditingController();
+  final _signupEmail     = TextEditingController();
+  final _signupPassword  = TextEditingController();
+  bool _acceptTerms      = false;
+
+  // For sign-in also keep phone/confirm for compat
+  final _signupPhone   = TextEditingController();
+  final _signupConfirm = TextEditingController();
+  bool _signupObscure  = true;
 
   String? _error;
-  bool    _googleLoading = false;
+  bool _googleLoading = false;
 
   final _auth = AuthService.instance;
 
-  // ── Brand palette ─────────────────────────────────────────
-  static const kPrimary = Color(0xFF00B4D8);
-  static const kAccent  = Color(0xFFFF6B35);
-  static const kSurface = Color(0xFF0A1628);
-  static const kCard    = Color(0xFF112240);
-  static const kBorder  = Color(0xFF1E3A5F);
-  static const kText    = Color(0xFFE8F4FD);
-  static const kSubtext = Color(0xFF7BAFD4);
-  static const kError   = Color(0xFFFF4757);
-  static const kSuccess = Color(0xFF00C896);
-
-  @override
-  void initState() {
-    super.initState();
-    _tabCtrl = TabController(length: 2, vsync: this);
-    _tabCtrl.addListener(() {
-      if (!_tabCtrl.indexIsChanging) return;
-      setState(() {
-        _tab  = _tabCtrl.index;
-        _error = null;
-      });
-    });
-  }
+  // ── Palette (dark teal/black theme from reference) ─────────
+  // ignore: unused_field
+  static const kBgLeft    = Color(0xFF071A1A);   // very dark teal-black
+  static const kBgRight   = Color(0xFF0D2626);
+  static const kDarkBg    = Color(0xFF041212);
+  static const kTeal      = Color(0xFF008080);
+  static const kTealLight = Color(0xFF00C2C2);
+  static const kWhite     = Color(0xFFFFFFFF);
+  static const kOffWhite  = Color(0xFFF7F8FA);
+  static const kBorder    = Color(0xFFE0E4EA);
+  static const kText      = Color(0xFF111827);
+  static const kSubtext   = Color(0xFF6B7280);
+  static const kFieldBg   = Color(0xFFFFFFFF);
+  static const kError     = Color(0xFFEF4444);
+  static const kBlack     = Color(0xFF000000);
 
   @override
   void dispose() {
-    _tabCtrl.dispose();
-    _loginEmail.dispose();
-    _loginPassword.dispose();
-    _signupName.dispose();
-    _signupEmail.dispose();
-    _signupPhone.dispose();
-    _signupPassword.dispose();
-    _signupConfirm.dispose();
+    _loginEmail.dispose(); _loginPassword.dispose();
+    _signupFirstName.dispose(); _signupLastName.dispose();
+    _signupEmail.dispose(); _signupPassword.dispose();
+    _signupPhone.dispose(); _signupConfirm.dispose();
     super.dispose();
   }
 
-  // ── Actions ───────────────────────────────────────────────
-
   Future<void> _doLogin() async {
-    final email    = _loginEmail.text.trim();
+    final email = _loginEmail.text.trim();
     final password = _loginPassword.text;
-
     if (email.isEmpty || password.isEmpty) {
       setState(() => _error = 'Please enter your email and password.');
       return;
     }
-    if (!email.contains('@')) {
-      setState(() => _error = 'Please enter a valid email address.');
-      return;
-    }
-
     setState(() => _error = null);
     final err = await _auth.login(email: email, password: password);
     if (err != null && mounted) setState(() => _error = err);
   }
 
   Future<void> _doSignup() async {
-    final name     = _signupName.text.trim();
-    final email    = _signupEmail.text.trim();
+    final first = _signupFirstName.text.trim();
+    final last  = _signupLastName.text.trim();
+    final email = _signupEmail.text.trim();
     final password = _signupPassword.text;
-    final confirm  = _signupConfirm.text;
-    final phone    = _signupPhone.text.trim();
-
-    if (name.isEmpty || email.isEmpty || password.isEmpty) {
-      setState(() => _error = 'Name, email and password are required.');
+    if (first.isEmpty || email.isEmpty || password.isEmpty) {
+      setState(() => _error = 'First name, email and password are required.');
       return;
     }
     if (!email.contains('@')) {
@@ -108,15 +88,13 @@ class _LoginPageState extends State<LoginPage>
       setState(() => _error = 'Password must be at least 6 characters.');
       return;
     }
-    if (password != confirm) {
-      setState(() => _error = 'Passwords do not match.');
+    if (!_acceptTerms) {
+      setState(() => _error = 'Please accept the Terms & Conditions.');
       return;
     }
-
     setState(() => _error = null);
     final err = await _auth.signUp(
-      name: name, email: email, password: password, phone: phone,
-    );
+        name: '$first $last', email: email, password: password, phone: '');
     if (err != null && mounted) setState(() => _error = err);
   }
 
@@ -134,151 +112,87 @@ class _LoginPageState extends State<LoginPage>
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: kCard,
+      backgroundColor: kOffWhite,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheet) {
           Future<void> send() async {
             setSheet(() => sheetError = null);
             final err = await _auth.resetPassword(email: emailCtrl.text.trim());
-            if (err != null) {
-              setSheet(() => sheetError = err);
-            } else {
-              setSheet(() => sent = true);
-            }
+            // ignore: curly_braces_in_flow_control_structures
+            if (err != null) setSheet(() => sheetError = err);
+            else setSheet(() => sent = true);
           }
 
           return Padding(
             padding: EdgeInsets.only(
-              left: 24, right: 24, top: 28,
-              bottom: MediaQuery.of(ctx).viewInsets.bottom + 28,
-            ),
+                left: 24, right: 24, top: 24,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 28),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Handle
-                Center(
-                  child: Container(
-                    width: 40, height: 4,
-                    decoration: BoxDecoration(
-                      color: kBorder,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
+                Center(child: Container(
+                  width: 36, height: 4,
+                  decoration: BoxDecoration(
+                      color: kBorder, borderRadius: BorderRadius.circular(2)),
+                )),
                 const SizedBox(height: 20),
-
                 if (!sent) ...[
-                  Center(
-                    child: Container(
-                      width: 60, height: 60,
-                      decoration: BoxDecoration(
-                        color: kPrimary.withOpacity(0.12),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: kPrimary.withOpacity(0.3)),
-                      ),
-                      child: const Icon(Icons.lock_reset_rounded,
-                          color: kPrimary, size: 28),
-                    ),
+                  const Text('Reset Password',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: kText, fontSize: 20,
+                          fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 6),
+                  const Text("Enter your email and we'll send a reset link.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: kSubtext, fontSize: 13)),
+                  const SizedBox(height: 20),
+                  if (sheetError != null) ...[
+                    _ErrBox(message: sheetError!),
+                    const SizedBox(height: 12),
+                  ],
+                  _OutlineField(
+                    controller: emailCtrl, hint: 'Email address',
+                    keyboardType: TextInputType.emailAddress,
                   ),
                   const SizedBox(height: 16),
-                  const Text('Forgot Password?',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: kText, fontSize: 20, fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Enter your email and we\'ll send you a link to reset your password.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: kSubtext, fontSize: 13, height: 1.5),
-                  ),
-                  const SizedBox(height: 24),
-
-                  if (sheetError != null) ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: kError.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: kError.withOpacity(0.4)),
-                      ),
-                      child: Row(children: [
-                        const Icon(Icons.error_outline, color: kError, size: 16),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(sheetError!,
-                              style: const TextStyle(color: kError, fontSize: 12)),
-                        ),
-                      ]),
-                    ),
-                    const SizedBox(height: 14),
-                  ],
-
-                  // Email field
-                  _SheetField(controller: emailCtrl),
-                  const SizedBox(height: 20),
-
-                  // Send button
                   ListenableBuilder(
                     listenable: _auth,
-                    builder: (_, _) => _GradientButton(
+                    builder: (_, _) => _DarkBtn(
                       label: 'Send Reset Link',
-                      loading: _auth.loading,
-                      onPressed: send,
+                      loading: _auth.loading, onPressed: send,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   TextButton(
                     onPressed: () => Navigator.pop(ctx),
                     child: const Text('Cancel',
                         style: TextStyle(color: kSubtext, fontSize: 13)),
                   ),
                 ] else ...[
-                  // Success
-                  Center(
-                    child: Container(
-                      width: 72, height: 72,
-                      decoration: BoxDecoration(
-                        color: kSuccess.withOpacity(0.12),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: kSuccess.withOpacity(0.4), width: 2),
-                      ),
-                      child: const Icon(Icons.mark_email_read_rounded,
-                          color: kSuccess, size: 34),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
+                  const Icon(Icons.mark_email_read_rounded,
+                      color: kTeal, size: 48),
+                  const SizedBox(height: 14),
                   const Text('Check your inbox!',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: kText, fontSize: 20, fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 8),
-                  Text(
-                    'A password reset link has been sent to\n${emailCtrl.text.trim()}',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: kSubtext, fontSize: 13, height: 1.5),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Check your spam folder if you don\'t see it within a minute.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Color(0xFF4A7A9B), fontSize: 11),
-                  ),
-                  const SizedBox(height: 24),
+                      style: TextStyle(color: kText, fontSize: 20,
+                          fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 20),
                   SizedBox(
                     height: 48,
                     child: ElevatedButton(
                       onPressed: () => Navigator.pop(ctx),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: kPrimary.withOpacity(0.15),
-                        foregroundColor: kPrimary,
+                        backgroundColor: kText,
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
+                            borderRadius: BorderRadius.circular(8)),
                         elevation: 0,
                       ),
-                      child: const Text('Back to Sign In',
-                          style: TextStyle(fontWeight: FontWeight.w700)),
+                      child: const Text('Done',
+                          style: TextStyle(
+                              color: kWhite, fontWeight: FontWeight.w700)),
                     ),
                   ),
                 ],
@@ -290,250 +204,345 @@ class _LoginPageState extends State<LoginPage>
     );
   }
 
-  // ── Build ─────────────────────────────────────────────────
+  // ════════════════════════════════════════════════════════════
+  // BUILD
+  // ════════════════════════════════════════════════════════════
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kSurface,
-      body: Stack(
-        children: [
-          Positioned(top: -80, right: -80,
-              child: _Blob(color: kPrimary.withOpacity(0.18), size: 280)),
-          Positioned(bottom: -60, left: -60,
-              child: _Blob(color: kAccent.withOpacity(0.12), size: 220)),
-          Positioned(top: 200, left: -40,
-              child: _Blob(color: kPrimary.withOpacity(0.08), size: 160)),
-
-          SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildBranding(),
-                      const SizedBox(height: 32),
-                      _buildTabBar(),
-                      const SizedBox(height: 20),
-                      if (_error != null) ...[
-                        _buildErrorBanner(),
-                        const SizedBox(height: 16),
-                      ],
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 250),
-                        transitionBuilder: (child, anim) => FadeTransition(
-                          opacity: anim,
-                          child: SlideTransition(
-                            position: Tween<Offset>(
-                              begin: const Offset(0.05, 0),
-                              end: Offset.zero,
-                            ).animate(anim),
-                            child: child,
-                          ),
-                        ),
-                        child: _tab == 0
-                            ? _loginForm()
-                            : _signupForm(),
-                      ),
-                    ],
-                  ),
-                ),
+      body: Container(
+        // Dark teal-to-black background like reference
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFF0A2E2E),
+              Color(0xFF041818),
+              Color(0xFF062020),
+              Color(0xFF031010),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 36),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 760),
+                child: _buildCard(),
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildBranding() {
-    return Center(
-      child: Column(
+  // ── The split card ────────────────────────────────────────
+
+  Widget _buildCard() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.55),
+            blurRadius: 60,
+            spreadRadius: 8,
+            offset: const Offset(0, 24),
+          ),
+          BoxShadow(
+            color: kTeal.withOpacity(0.08),
+            blurRadius: 80,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // LEFT: Dark artwork panel
+              SizedBox(width: 280, child: _buildHeroPanel()),
+              // RIGHT: White form panel
+              Expanded(child: _buildFormPanel()),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── LEFT: Dark artwork hero panel ────────────────────────
+
+  Widget _buildHeroPanel() {
+    return Container(
+      decoration: const BoxDecoration(
+        // Dark blue-black with teal shimmer, mimicking the abstract artwork
+        gradient: LinearGradient(
+          colors: [
+            Color(0xFF0A1628),  // deep navy
+            Color(0xFF061220),
+            Color(0xFF0D2040),
+            Color(0xFF051830),
+          ],
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+        ),
+      ),
+      child: Stack(
         children: [
-          Container(
-            width: 90, height: 90,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(22),
-              boxShadow: [
-                BoxShadow(
-                  color: kPrimary.withOpacity(0.35),
-                  blurRadius: 32, spreadRadius: 4,
+          // Teal glow blob top-right (mimics blue paint swirl)
+          Positioned(top: -60, right: -60,
+            child: Container(
+              width: 220, height: 220,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFF0066AA).withOpacity(0.55),
+                    const Color(0xFF003366).withOpacity(0.3),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Teal shimmer mid-left
+          Positioned(top: 80, left: -30,
+            child: Container(
+              width: 160, height: 160,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFF004488).withOpacity(0.4),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Deep blue swirl bottom
+          Positioned(bottom: -40, right: -20,
+            child: Container(
+              width: 200, height: 200,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFF002244).withOpacity(0.6),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Bright teal accent spot
+          Positioned(top: 40, right: 20,
+            child: Container(
+              width: 60, height: 60,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF0088CC).withOpacity(0.25),
+              ),
+            ),
+          ),
+
+          // Logo + Text content
+          Padding(
+            padding: const EdgeInsets.fromLTRB(28, 32, 28, 36),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+
+                // Logo top
+                Row(
+                  children: [
+                    Container(
+                      width: 38, height: 38,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: kWhite.withOpacity(0.1),
+                        border: Border.all(color: kWhite.withOpacity(0.25), width: 1.5),
+                      ),
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/logo.jpeg',
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Icon(
+                              Icons.water_drop_rounded, color: kWhite, size: 18),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    const Text('Maji Smart',
+                        style: TextStyle(
+                          color: kWhite, fontSize: 13,
+                          fontWeight: FontWeight.w700, letterSpacing: 0.2,
+                        )),
+                  ],
+                ),
+
+                // Main copy (bottom of panel like reference)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _mode == 0
+                          ? 'Welcome\nback.'
+                          : 'Create your\nAccount',
+                      style: const TextStyle(
+                        color: kWhite,
+                        fontSize: 30,
+                        fontWeight: FontWeight.w900,
+                        height: 1.15,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      _mode == 0
+                          ? 'Monitor boreholes in\nreal-time across Africa.'
+                          : 'Monitor boreholes and\nmanage water smartly.',
+                      style: TextStyle(
+                        color: kWhite.withOpacity(0.6),
+                        fontSize: 13,
+                        height: 1.6,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(22),
-              child: Image.asset(
-                'assets/logo.jpeg',
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [kPrimary, Color(0xFF0077B6)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(22),
-                  ),
-                  child: const Icon(Icons.water_drop_rounded,
-                      color: Colors.white, size: 40),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          ShaderMask(
-            shaderCallback: (bounds) => const LinearGradient(
-              colors: [kPrimary, Color(0xFF48CAE4)],
-            ).createShader(bounds),
-            child: const Text(
-              'Maji Smart',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 30,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.8,
-              ),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: kAccent.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: kAccent.withOpacity(0.4)),
-            ),
-            child: const Text(
-              'Borehole Monitoring System',
-              style: TextStyle(
-                  color: kAccent,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.5),
-            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildTabBar() {
-    return Container(
-      height: 48,
-      decoration: BoxDecoration(
-        color: kCard,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: kBorder),
-      ),
-      child: TabBar(
-        controller: _tabCtrl,
-        indicator: BoxDecoration(
-          gradient: const LinearGradient(colors: [kPrimary, Color(0xFF0077B6)]),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(color: kPrimary.withOpacity(0.4), blurRadius: 12),
-          ],
-        ),
-        labelColor: Colors.white,
-        unselectedLabelColor: kSubtext,
-        labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-        dividerColor: Colors.transparent,
-        tabs: const [Tab(text: 'Sign In'), Tab(text: 'Sign Up')],
-      ),
-    );
-  }
+  // ── RIGHT: White form panel ───────────────────────────────
 
-  Widget _buildErrorBanner() {
+  Widget _buildFormPanel() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: kError.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: kError.withOpacity(0.5)),
-      ),
-      child: Row(children: [
-        const Icon(Icons.error_outline, color: kError, size: 16),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            _error!,
-            style: const TextStyle(color: kError, fontSize: 12),
+      color: kWhite,
+      padding: const EdgeInsets.fromLTRB(36, 36, 36, 36),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 260),
+        transitionBuilder: (child, anim) => FadeTransition(
+          opacity: anim,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.04), end: Offset.zero,
+            ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOut)),
+            child: child,
           ),
         ),
-        GestureDetector(
-          onTap: () => setState(() => _error = null),
-          child: const Icon(Icons.close, color: kError, size: 16),
-        ),
-      ]),
+        child: _mode == 0
+            ? _signInForm(key: const ValueKey('signin'))
+            : _signUpForm(key: const ValueKey('signup')),
+      ),
     );
   }
 
-  Widget _loginForm() {
+  // ── Sign-In Form ──────────────────────────────────────────
+
+  Widget _signInForm({Key? key}) {
     return Column(
-      key: const ValueKey('login'),
+      key: key,
       crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        _Field(
-          controller: _loginEmail,
-          label: 'Email Address',
-          hint: 'you@example.com',
-          icon: Icons.email_outlined,
-          keyboardType: TextInputType.emailAddress,
-        ),
-        const SizedBox(height: 14),
-        _Field(
-          controller: _loginPassword,
-          label: 'Password',
-          hint: '••••••••',
-          icon: Icons.lock_outline,
+        const Text('Sign In',
+            style: TextStyle(
+                color: kText, fontSize: 26,
+                fontWeight: FontWeight.w900, letterSpacing: -0.3)),
+        const SizedBox(height: 24),
+
+        if (_error != null) ...[
+          _ErrBox(message: _error!, onClose: () => setState(() => _error = null)),
+          const SizedBox(height: 14),
+        ],
+
+        _OutlineField(controller: _loginEmail, hint: 'Email address',
+            keyboardType: TextInputType.emailAddress),
+        const SizedBox(height: 10),
+        _OutlineField(
+          controller: _loginPassword, hint: 'Password',
           obscure: _loginObscure,
           suffix: IconButton(
-            icon: Icon(
-              _loginObscure
-                  ? Icons.visibility_off_outlined
-                  : Icons.visibility_outlined,
-              color: kSubtext, size: 18,
-            ),
+            icon: Icon(_loginObscure
+                ? Icons.visibility_off_outlined
+                : Icons.visibility_outlined,
+                color: kSubtext, size: 18),
             onPressed: () => setState(() => _loginObscure = !_loginObscure),
           ),
         ),
+        const SizedBox(height: 8),
+
+        // Forgot password
         Align(
           alignment: Alignment.centerRight,
-          child: TextButton(
-            onPressed: _doForgotPassword,
+          child: GestureDetector(
+            onTap: _doForgotPassword,
             child: const Text('Forgot password?',
-                style: TextStyle(color: kPrimary, fontSize: 12)),
+                style: TextStyle(
+                    color: kSubtext, fontSize: 12,
+                    fontWeight: FontWeight.w500)),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 20),
+
+        // Login → dark button
         ListenableBuilder(
           listenable: _auth,
-          builder: (_, __) => _GradientButton(
-            label: 'Sign In',
-            loading: _auth.loading,
-            onPressed: _doLogin,
+          builder: (_, __) => _DarkBtn(
+            label: 'Sign in  →',
+            loading: _auth.loading, onPressed: _doLogin,
           ),
         ),
-        const SizedBox(height: 20),
-        const _OrDivider(),
         const SizedBox(height: 16),
-        _GoogleButton(loading: _googleLoading, onPressed: _doGoogleSignIn),
+
+        // Divider
+        _OrDivider(),
+        const SizedBox(height: 16),
+
+        // Google
+        _SocialBtn(
+          label: 'Sign in with Google',
+          icon: _googleGIcon(),
+          onPressed: _googleLoading ? null : _doGoogleSignIn,
+          loading: _googleLoading,
+          dark: false,
+        ),
+        const SizedBox(height: 10),
+        _SocialBtn(
+          label: 'Sign in with Apple',
+          icon: const Icon(Icons.apple, color: kWhite, size: 18),
+          onPressed: () {},
+          dark: true,
+        ),
+
         const SizedBox(height: 20),
+        // Switch to sign up
         Center(
           child: GestureDetector(
-            onTap: () => _tabCtrl.animateTo(1),
+            onTap: () => setState(() { _mode = 1; _error = null; }),
             child: RichText(
               text: const TextSpan(
-                text: "Don't have an account? ",
+                text: "Don't have an account?  ",
                 style: TextStyle(color: kSubtext, fontSize: 13),
                 children: [
                   TextSpan(
-                    text: 'Sign Up',
-                    style: TextStyle(color: kPrimary, fontWeight: FontWeight.w700),
+                    text: 'Sign up',
+                    style: TextStyle(
+                        color: kText, fontWeight: FontWeight.w800),
                   ),
                 ],
               ),
@@ -544,83 +553,115 @@ class _LoginPageState extends State<LoginPage>
     );
   }
 
-  Widget _signupForm() {
+  // ── Sign-Up Form ──────────────────────────────────────────
+
+  Widget _signUpForm({Key? key}) {
     return Column(
-      key: const ValueKey('signup'),
+      key: key,
       crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        _Field(
-          controller: _signupName,
-          label: 'Full Name',
-          hint: 'John Kamau',
-          icon: Icons.person_outline,
-        ),
-        const SizedBox(height: 14),
-        _Field(
-          controller: _signupEmail,
-          label: 'Email Address',
-          hint: 'you@example.com',
-          icon: Icons.email_outlined,
-          keyboardType: TextInputType.emailAddress,
-        ),
-        const SizedBox(height: 14),
-        _Field(
-          controller: _signupPhone,
-          label: 'Phone (optional)',
-          hint: '+254 7XX XXX XXX',
-          icon: Icons.phone_outlined,
-          keyboardType: TextInputType.phone,
-        ),
-        const SizedBox(height: 14),
-        _Field(
-          controller: _signupPassword,
-          label: 'Password',
-          hint: 'Min. 6 characters',
-          icon: Icons.lock_outline,
+        const Text('Sign Up',
+            style: TextStyle(
+                color: kText, fontSize: 26,
+                fontWeight: FontWeight.w900, letterSpacing: -0.3)),
+        const SizedBox(height: 24),
+
+        if (_error != null) ...[
+          _ErrBox(message: _error!, onClose: () => setState(() => _error = null)),
+          const SizedBox(height: 14),
+        ],
+
+        // First + Last name row
+        Row(children: [
+          Expanded(child: _OutlineField(
+              controller: _signupFirstName, hint: 'First name')),
+          const SizedBox(width: 10),
+          Expanded(child: _OutlineField(
+              controller: _signupLastName, hint: 'Last name')),
+        ]),
+        const SizedBox(height: 10),
+        _OutlineField(controller: _signupEmail, hint: 'Email address',
+            keyboardType: TextInputType.emailAddress),
+        const SizedBox(height: 10),
+        _OutlineField(
+          controller: _signupPassword, hint: 'Password',
           obscure: _signupObscure,
           suffix: IconButton(
-            icon: Icon(
-              _signupObscure
-                  ? Icons.visibility_off_outlined
-                  : Icons.visibility_outlined,
-              color: kSubtext, size: 18,
-            ),
+            icon: Icon(_signupObscure
+                ? Icons.visibility_off_outlined
+                : Icons.visibility_outlined,
+                color: kSubtext, size: 18),
             onPressed: () => setState(() => _signupObscure = !_signupObscure),
           ),
         ),
-        const SizedBox(height: 14),
-        _Field(
-          controller: _signupConfirm,
-          label: 'Confirm Password',
-          hint: 'Repeat password',
-          icon: Icons.lock_outline,
-          obscure: _signupObscure,
-        ),
-        const SizedBox(height: 24),
-        ListenableBuilder(
-          listenable: _auth,
-          builder: (_, __) => _GradientButton(
-            label: 'Create Account',
-            loading: _auth.loading,
-            onPressed: _doSignup,
+        const SizedBox(height: 12),
+
+        // Accept T&C checkbox
+        GestureDetector(
+          onTap: () => setState(() => _acceptTerms = !_acceptTerms),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 18, height: 18,
+                child: Checkbox(
+                  value: _acceptTerms,
+                  onChanged: (v) => setState(() => _acceptTerms = v ?? false),
+                  activeColor: kText,
+                  side: const BorderSide(color: kBorder, width: 1.5),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text('Accept Terms & Conditions',
+                  style: TextStyle(color: kSubtext, fontSize: 12)),
+            ],
           ),
         ),
-        const SizedBox(height: 20),
-        const _OrDivider(),
+        const SizedBox(height: 18),
+
+        // Join us button
+        ListenableBuilder(
+          listenable: _auth,
+          builder: (_, __) => _DarkBtn(
+            label: 'Join us  →',
+            loading: _auth.loading, onPressed: _doSignup,
+          ),
+        ),
         const SizedBox(height: 16),
-        _GoogleButton(loading: _googleLoading, onPressed: _doGoogleSignIn),
+
+        _OrDivider(),
+        const SizedBox(height: 16),
+
+        _SocialBtn(
+          label: 'Sign up with Google',
+          icon: _googleGIcon(),
+          onPressed: _googleLoading ? null : _doGoogleSignIn,
+          loading: _googleLoading,
+          dark: false,
+        ),
+        const SizedBox(height: 10),
+        _SocialBtn(
+          label: 'Sign up with Apple',
+          icon: const Icon(Icons.apple, color: kWhite, size: 18),
+          onPressed: () {},
+          dark: true,
+        ),
+
         const SizedBox(height: 20),
         Center(
           child: GestureDetector(
-            onTap: () => _tabCtrl.animateTo(0),
+            onTap: () => setState(() { _mode = 0; _error = null; }),
             child: RichText(
               text: const TextSpan(
-                text: 'Already have an account? ',
+                text: 'Already have an account?  ',
                 style: TextStyle(color: kSubtext, fontSize: 13),
                 children: [
                   TextSpan(
-                    text: 'Sign In',
-                    style: TextStyle(color: kPrimary, fontWeight: FontWeight.w700),
+                    text: 'Sign in',
+                    style: TextStyle(
+                        color: kText, fontWeight: FontWeight.w800),
                   ),
                 ],
               ),
@@ -630,127 +671,40 @@ class _LoginPageState extends State<LoginPage>
       ],
     );
   }
-}
 
-// ── Decorative blob ───────────────────────────────────────────
-
-class _Blob extends StatelessWidget {
-  final Color color;
-  final double size;
-  const _Blob({required this.color, required this.size});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size, height: size,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-    );
-  }
-}
-
-// ── Or divider ────────────────────────────────────────────────
-
-class _OrDivider extends StatelessWidget {
-  const _OrDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(children: [
-      const Expanded(
-          child: Divider(color: _LoginPageState.kBorder, thickness: 1)),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Text('or continue with',
-            style: const TextStyle(
-                color: _LoginPageState.kSubtext, fontSize: 11)),
-      ),
-      const Expanded(
-          child: Divider(color: _LoginPageState.kBorder, thickness: 1)),
-    ]);
-  }
-}
-
-// ── Google Sign-In button ─────────────────────────────────────
-
-class _GoogleButton extends StatelessWidget {
-  final VoidCallback onPressed;
-  final bool loading;
-  const _GoogleButton({required this.onPressed, this.loading = false});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _googleGIcon() {
     return SizedBox(
-      height: 50,
-      child: OutlinedButton(
-        onPressed: loading ? null : onPressed,
-        style: OutlinedButton.styleFrom(
-          backgroundColor: _LoginPageState.kCard,
-          side: const BorderSide(color: _LoginPageState.kBorder, width: 1.5),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          disabledBackgroundColor: _LoginPageState.kCard,
+      width: 18, height: 18,
+      child: Center(
+        child: Text('G',
+          style: TextStyle(
+            fontSize: 14, fontWeight: FontWeight.w900,
+            foreground: Paint()
+              ..shader = const LinearGradient(
+                colors: [Color(0xFF4285F4), Color(0xFF34A853)],
+              ).createShader(const Rect.fromLTWH(0, 0, 18, 18)),
+          ),
         ),
-        child: loading
-            ? const SizedBox(
-                width: 22, height: 22,
-                child: CircularProgressIndicator(
-                    strokeWidth: 2.5, color: _LoginPageState.kPrimary),
-              )
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 22, height: 22,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white,
-                    ),
-                    child: Center(
-                      child: Text(
-                        'G',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w900,
-                          foreground: Paint()
-                            ..shader = const LinearGradient(
-                              colors: [Color(0xFF4285F4), Color(0xFF34A853)],
-                            ).createShader(
-                                const Rect.fromLTWH(0, 0, 22, 22)),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  const Text(
-                    'Continue with Google',
-                    style: TextStyle(
-                      color: _LoginPageState.kText,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
       ),
     );
   }
 }
 
-// ── Text field ────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════
+// SHARED HELPER WIDGETS
+// ════════════════════════════════════════════════════════════════
 
-class _Field extends StatelessWidget {
+// Outlined input field — clean minimal like reference
+class _OutlineField extends StatelessWidget {
   final TextEditingController controller;
-  final String label;
   final String hint;
-  final IconData icon;
   final bool obscure;
   final TextInputType? keyboardType;
   final Widget? suffix;
 
-  const _Field({
+  const _OutlineField({
     required this.controller,
-    required this.label,
     required this.hint,
-    required this.icon,
     this.obscure = false,
     this.keyboardType,
     this.suffix,
@@ -758,168 +712,186 @@ class _Field extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: const TextStyle(
-                color: _LoginPageState.kSubtext,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.3)),
-        const SizedBox(height: 7),
-        TextField(
-          controller: controller,
-          obscureText: obscure,
-          keyboardType: keyboardType,
-          style: const TextStyle(color: _LoginPageState.kText, fontSize: 14),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: const TextStyle(color: Color(0xFF3D5A7A), fontSize: 13),
-            prefixIcon:
-                Icon(icon, color: _LoginPageState.kSubtext, size: 18),
-            suffixIcon: suffix,
-            filled: true,
-            fillColor: _LoginPageState.kCard,
-            contentPadding: const EdgeInsets.symmetric(vertical: 14),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: _LoginPageState.kBorder),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: _LoginPageState.kBorder),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                  color: _LoginPageState.kPrimary, width: 2),
-            ),
-          ),
+    return TextField(
+      controller: controller,
+      obscureText: obscure,
+      keyboardType: keyboardType,
+      style: const TextStyle(
+          color: _LoginPageState.kText, fontSize: 13.5),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(
+            color: _LoginPageState.kSubtext, fontSize: 13.5),
+        suffixIcon: suffix,
+        filled: true,
+        fillColor: _LoginPageState.kFieldBg,
+        contentPadding: const EdgeInsets.symmetric(
+            horizontal: 14, vertical: 13),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(
+              color: _LoginPageState.kBorder, width: 1),
         ),
-      ],
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(
+              color: _LoginPageState.kBorder, width: 1),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(
+              color: _LoginPageState.kText, width: 1.5),
+        ),
+      ),
     );
   }
 }
 
-// ── Sheet email field (for forgot password modal) ─────────────
-
-class _SheetField extends StatelessWidget {
-  final TextEditingController controller;
-  const _SheetField({required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Email Address',
-            style: TextStyle(
-                color: _LoginPageState.kSubtext,
-                fontSize: 12,
-                fontWeight: FontWeight.w600)),
-        const SizedBox(height: 7),
-        TextField(
-          controller: controller,
-          keyboardType: TextInputType.emailAddress,
-          style: const TextStyle(color: _LoginPageState.kText, fontSize: 14),
-          decoration: InputDecoration(
-            hintText: 'you@example.com',
-            hintStyle: const TextStyle(
-                color: Color(0xFF3D5A7A), fontSize: 13),
-            prefixIcon: const Icon(Icons.email_outlined,
-                color: _LoginPageState.kSubtext, size: 18),
-            filled: true,
-            fillColor: _LoginPageState.kSurface,
-            contentPadding: const EdgeInsets.symmetric(vertical: 14),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: _LoginPageState.kBorder),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: _LoginPageState.kBorder),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                  color: _LoginPageState.kPrimary, width: 2),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Gradient primary button ───────────────────────────────────
-
-class _GradientButton extends StatelessWidget {
+// Dark filled button (matches "Join us →" in reference)
+class _DarkBtn extends StatelessWidget {
   final String label;
   final bool loading;
   final VoidCallback onPressed;
+  const _DarkBtn(
+      {required this.label, required this.loading, required this.onPressed});
 
-  const _GradientButton({
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 48,
+      child: ElevatedButton(
+        onPressed: loading ? null : onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: _LoginPageState.kText,
+          disabledBackgroundColor:
+              _LoginPageState.kText.withOpacity(0.35),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8)),
+          elevation: 0,
+        ),
+        child: loading
+            ? const SizedBox(
+                width: 20, height: 20,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2.5, color: Colors.white))
+            : Text(label,
+                style: const TextStyle(
+                  color: _LoginPageState.kWhite,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  letterSpacing: 0.2,
+                )),
+      ),
+    );
+  }
+}
+
+// Social button (Google outline / Apple dark)
+class _SocialBtn extends StatelessWidget {
+  final String label;
+  final Widget icon;
+  final VoidCallback? onPressed;
+  final bool dark;
+  final bool loading;
+  const _SocialBtn({
     required this.label,
-    required this.loading,
+    required this.icon,
     required this.onPressed,
+    this.dark = false,
+    this.loading = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 50,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: loading
-              ? null
-              : const LinearGradient(
-                  colors: [_LoginPageState.kPrimary, Color(0xFF0077B6)],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
-          color: loading
-              ? _LoginPageState.kPrimary.withOpacity(0.3)
-              : null,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: loading
-              ? []
-              : [
-                  BoxShadow(
-                    color: _LoginPageState.kPrimary.withOpacity(0.45),
-                    blurRadius: 20,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-        ),
-        child: ElevatedButton(
-          onPressed: loading ? null : onPressed,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.transparent,
-            shadowColor: Colors.transparent,
-            disabledBackgroundColor: Colors.transparent,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
-            elevation: 0,
-          ),
-          child: loading
-              ? const SizedBox(
-                  width: 22, height: 22,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2.5, color: Colors.white),
-                )
-              : Text(label,
+      height: 46,
+      child: dark
+          ? ElevatedButton.icon(
+              onPressed: onPressed,
+              icon: icon,
+              label: Text(label,
                   style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 15,
-                      letterSpacing: 0.4)),
-        ),
+                      color: _LoginPageState.kWhite,
+                      fontWeight: FontWeight.w600, fontSize: 13)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _LoginPageState.kBlack,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+                elevation: 0,
+              ),
+            )
+          : OutlinedButton.icon(
+              onPressed: onPressed,
+              icon: loading
+                  ? const SizedBox(width: 18, height: 18,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: _LoginPageState.kText))
+                  : icon,
+              label: Text(label,
+                  style: const TextStyle(
+                      color: _LoginPageState.kText,
+                      fontWeight: FontWeight.w600, fontSize: 13)),
+              style: OutlinedButton.styleFrom(
+                backgroundColor: _LoginPageState.kWhite,
+                side: const BorderSide(
+                    color: _LoginPageState.kBorder, width: 1),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+    );
+  }
+}
+
+// "or" divider
+class _OrDivider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Row(children: [
+      const Expanded(child: Divider(
+          color: _LoginPageState.kBorder, thickness: 1)),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Text('or',
+            style: TextStyle(
+                color: _LoginPageState.kSubtext, fontSize: 12)),
       ),
+      const Expanded(child: Divider(
+          color: _LoginPageState.kBorder, thickness: 1)),
+    ]);
+  }
+}
+
+// Error box
+class _ErrBox extends StatelessWidget {
+  final String message;
+  final VoidCallback? onClose;
+  const _ErrBox({required this.message, this.onClose});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: BoxDecoration(
+        color: _LoginPageState.kError.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(8),
+        border:
+            Border.all(color: _LoginPageState.kError.withOpacity(0.4)),
+      ),
+      child: Row(children: [
+        const Icon(Icons.error_outline,
+            color: _LoginPageState.kError, size: 15),
+        const SizedBox(width: 8),
+        Expanded(
+            child: Text(message,
+                style: const TextStyle(
+                    color: _LoginPageState.kError, fontSize: 12))),
+        if (onClose != null)
+          GestureDetector(
+              onTap: onClose,
+              child: const Icon(Icons.close,
+                  color: _LoginPageState.kError, size: 15)),
+      ]),
     );
   }
 }
