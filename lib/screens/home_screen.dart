@@ -14,7 +14,6 @@ import 'alerts_page.dart';
 
 // ─── Design Tokens ───────────────────────────────────────────
 class AppColors {
-  // Page / content area
   static const bg          = Color(0xFFEFF6FF);
   static const surface     = Color(0xFFFFFFFF);
   static const surfaceAlt  = Color(0xFFDBEAFE);
@@ -25,14 +24,13 @@ class AppColors {
   static const textSub     = Color(0xFF475569);
   static const textMuted   = Color(0xFF94A3B8);
 
-  // Sidebar — blue palette
-  static const sidebarBg       = Color(0xFF1E40AF);   // deep blue
-  static const sidebarSurface  = Color(0xFF1D3FAB);   // slightly lighter
-  static const sidebarBorder   = Color(0xFF2D52C4);   // subtle border
-  static const sidebarSelected = Color(0xFF3B5FD4);   // selected tile bg
-  static const sidebarText     = Color(0xFFEFF6FF);   // near-white text
-  static const sidebarTextSub  = Color(0xFF93C5FD);   // light blue sub text
-  static const sidebarIcon     = Color(0xFFBFD7F5);   // icon colour
+  static const sidebarBg       = Color(0xFF1E40AF);
+  static const sidebarSurface  = Color(0xFF1D3FAB);
+  static const sidebarBorder   = Color(0xFF2D52C4);
+  static const sidebarSelected = Color(0xFF3B5FD4);
+  static const sidebarText     = Color(0xFFEFF6FF);
+  static const sidebarTextSub  = Color(0xFF93C5FD);
+  static const sidebarIcon     = Color(0xFFBFD7F5);
 
   static const sidebarW          = 220.0;
   static const sidebarCollapsedW = 64.0;
@@ -64,6 +62,10 @@ class _HomeScreenState extends State<HomeScreen>
 
   final _auth = AuthService.instance;
 
+  // ── Shared pump state — passed to both BoreholeSystemCard
+  //    and WaterMeterCard so they stay in sync. ──────────────
+  final _pumpState = PumpStateNotifier(initiallyRunning: true);
+
   final List<_NavItem> _navItems = const [
     _NavItem(icon: Icons.dashboard_rounded,     label: 'Dashboard'),
     _NavItem(icon: Icons.bar_chart_rounded,     label: 'Analytics'),
@@ -88,6 +90,7 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void dispose() {
     _sidebarAnim.dispose();
+    _pumpState.dispose(); // clean up the notifier
     super.dispose();
   }
 
@@ -100,11 +103,17 @@ class _HomeScreenState extends State<HomeScreen>
 
   Widget _buildPage() {
     switch (_currentIndex) {
-      case 0:  return _DashboardPage(onGoToAlerts: _goToAlerts);
+      case 0:  return _DashboardPage(
+                 onGoToAlerts: _goToAlerts,
+                 pumpState:    _pumpState,   // ← pass it down
+               );
       case 1:  return const AnalyticsPage();
       case 2:  return const AlertsPage();
       case 3:  return const SettingsPage();
-      default: return _DashboardPage(onGoToAlerts: _goToAlerts);
+      default: return _DashboardPage(
+                 onGoToAlerts: _goToAlerts,
+                 pumpState:    _pumpState,
+               );
     }
   }
 
@@ -324,7 +333,7 @@ class _Sidebar extends StatelessWidget {
             ),
           ),
 
-          // ── User pill ────────────────────────────────────
+          // ── User pill ─────────────────────────────────────
           Container(
             margin:  const EdgeInsets.all(12),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -409,9 +418,7 @@ class _SidebarTile extends StatelessWidget {
           duration: const Duration(milliseconds: 180),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
-            color: selected
-                ? AppColors.sidebarSelected
-                : Colors.transparent,
+            color: selected ? AppColors.sidebarSelected : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
             border: selected
                 ? Border.all(color: Colors.white.withOpacity(0.15))
@@ -422,17 +429,14 @@ class _SidebarTile extends StatelessWidget {
               Stack(clipBehavior: Clip.none, children: [
                 Icon(icon,
                     size: 20,
-                    color: selected
-                        ? Colors.white
-                        : AppColors.sidebarIcon),
+                    color: selected ? Colors.white : AppColors.sidebarIcon),
                 if (showBadge)
                   Positioned(
                     top: -4, right: -4,
                     child: Container(
                       width: 8, height: 8,
                       decoration: const BoxDecoration(
-                          color: Color(0xFFFBBF24),
-                          shape: BoxShape.circle),
+                          color: Color(0xFFFBBF24), shape: BoxShape.circle),
                     ),
                   ),
               ]),
@@ -441,9 +445,7 @@ class _SidebarTile extends StatelessWidget {
                 Expanded(
                   child: Text(label,
                       style: TextStyle(
-                          color: selected
-                              ? Colors.white
-                              : AppColors.sidebarTextSub,
+                          color: selected ? Colors.white : AppColors.sidebarTextSub,
                           fontSize: 13,
                           fontWeight: selected
                               ? FontWeight.w600
@@ -503,7 +505,6 @@ class _TopBar extends StatelessWidget {
                   fontSize: 16,
                   fontWeight: FontWeight.w600)),
           const Spacer(),
-          // Live status pill
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
@@ -526,7 +527,6 @@ class _TopBar extends StatelessWidget {
             ]),
           ),
           const SizedBox(width: 12),
-          // Notifications bell
           Stack(clipBehavior: Clip.none, children: [
             IconButton(
               icon: const Icon(Icons.notifications_outlined,
@@ -589,16 +589,12 @@ class _BottomNav extends StatelessWidget {
                     children: [
                       Icon(e.value.icon,
                           size: 20,
-                          color: selected
-                              ? Colors.white
-                              : AppColors.sidebarTextSub),
+                          color: selected ? Colors.white : AppColors.sidebarTextSub),
                       const SizedBox(height: 3),
                       Text(e.value.label,
                           style: TextStyle(
                               fontSize: 10,
-                              color: selected
-                                  ? Colors.white
-                                  : AppColors.sidebarTextSub,
+                              color: selected ? Colors.white : AppColors.sidebarTextSub,
                               fontWeight: selected
                                   ? FontWeight.w600
                                   : FontWeight.normal)),
@@ -617,8 +613,13 @@ class _BottomNav extends StatelessWidget {
 // ─── Dashboard Page ───────────────────────────────────────────
 
 class _DashboardPage extends StatelessWidget {
-  final VoidCallback? onGoToAlerts;
-  const _DashboardPage({this.onGoToAlerts});
+  final VoidCallback?    onGoToAlerts;
+  final PumpStateNotifier pumpState;   // ← receives the shared notifier
+
+  const _DashboardPage({
+    this.onGoToAlerts,
+    required this.pumpState,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -645,9 +646,12 @@ class _DashboardPage extends StatelessWidget {
                 style: TextStyle(color: AppColors.textSub, fontSize: 13),
               ),
               const SizedBox(height: 20),
-              const BoreholeSystemCard(),
+
+              // Both cards receive the SAME pumpState instance
+              BoreholeSystemCard(pumpState: pumpState),
               const SizedBox(height: 16),
-              const WaterMeterCard(),
+              WaterMeterCard(pumpState: pumpState),
+
               const SizedBox(height: 16),
               const StatsRow(),
               const SizedBox(height: 16),
