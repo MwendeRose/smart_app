@@ -1,28 +1,39 @@
 // lib/screens/home_screen.dart
-// ignore_for_file: unnecessary_underscores, deprecated_member_use
+// ignore_for_file: unnecessary_underscores, deprecated_member_use, unused_import
 
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../widgets/borehole_system_card.dart';
 import '../widgets/water_meter_card.dart';
+import '../widgets/sub_meters_grid.dart';
 import '../widgets/stats_row.dart';
 import '../widgets/critical_alert_card.dart';
-import '../widgets/sub_meters_grid.dart';
 import 'analytics.dart';
 import 'settings.dart';
 import 'alerts_page.dart';
 
 // ─── Design Tokens ───────────────────────────────────────────
 class AppColors {
-  static const bg          = Color(0xFF0D1117);
-  static const surface     = Color(0xFF161B22);
-  static const surfaceAlt  = Color(0xFF1C2333);
-  static const border      = Color(0xFF30363D);
-  static const accent      = Color(0xFF2DD4BF);
-  static const accentSoft  = Color(0x262DD4BF);
-  static const textPrimary = Color(0xFFE6EDF3);
-  static const textSub     = Color(0xFF8B949E);
-  static const textMuted   = Color(0xFF484F58);
+  // Page / content area
+  static const bg          = Color(0xFFEFF6FF);
+  static const surface     = Color(0xFFFFFFFF);
+  static const surfaceAlt  = Color(0xFFDBEAFE);
+  static const border      = Color(0xFFBFD7F5);
+  static const accent      = Color(0xFF2563EB);
+  static const accentSoft  = Color(0x262563EB);
+  static const textPrimary = Color(0xFF0F172A);
+  static const textSub     = Color(0xFF475569);
+  static const textMuted   = Color(0xFF94A3B8);
+
+  // Sidebar — blue palette
+  static const sidebarBg       = Color(0xFF1E40AF);   // deep blue
+  static const sidebarSurface  = Color(0xFF1D3FAB);   // slightly lighter
+  static const sidebarBorder   = Color(0xFF2D52C4);   // subtle border
+  static const sidebarSelected = Color(0xFF3B5FD4);   // selected tile bg
+  static const sidebarText     = Color(0xFFEFF6FF);   // near-white text
+  static const sidebarTextSub  = Color(0xFF93C5FD);   // light blue sub text
+  static const sidebarIcon     = Color(0xFFBFD7F5);   // icon colour
+
   static const sidebarW          = 220.0;
   static const sidebarCollapsedW = 64.0;
 }
@@ -45,13 +56,12 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
-  int  _currentIndex   = 0;
+  int  _currentIndex    = 0;
   bool _sidebarExpanded = true;
 
   late AnimationController _sidebarAnim;
   late Animation<double>   _sidebarWidth;
 
-  // ── Use the singleton, not a fresh instance ───────────────
   final _auth = AuthService.instance;
 
   final List<_NavItem> _navItems = const [
@@ -161,7 +171,7 @@ class _HomeScreenState extends State<HomeScreen>
   }
 }
 
-// ─── Sidebar ─────────────────────────────────────────────────
+// ─── Nav Item ────────────────────────────────────────────────
 
 class _NavItem {
   final IconData icon;
@@ -169,14 +179,16 @@ class _NavItem {
   const _NavItem({required this.icon, required this.label});
 }
 
+// ─── Sidebar ─────────────────────────────────────────────────
+
 class _Sidebar extends StatelessWidget {
-  final double        width;
-  final bool          expanded;
-  final int           currentIndex;
+  final double         width;
+  final bool           expanded;
+  final int            currentIndex;
   final List<_NavItem> navItems;
-  final AppUser?      user;
+  final AppUser?       user;
   final ValueChanged<int> onTap;
-  final VoidCallback  onToggle;
+  final VoidCallback   onToggle;
 
   const _Sidebar({
     required this.width,
@@ -193,27 +205,53 @@ class _Sidebar extends StatelessWidget {
     return Container(
       width: width,
       height: double.infinity,
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(right: BorderSide(color: AppColors.border, width: 1)),
+      decoration: BoxDecoration(
+        color: AppColors.sidebarBg,
+        border: const Border(
+            right: BorderSide(color: AppColors.sidebarBorder, width: 1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 16,
+            offset: const Offset(4, 0),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Logo
+          // ── Logo ──────────────────────────────────────────
           Container(
-            height: 64,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            height: 72,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                Container(
-                  width: 32, height: 32,
-                  decoration: BoxDecoration(
-                    color: AppColors.accent,
-                    borderRadius: BorderRadius.circular(8),
+                SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                          color: AppColors.sidebarBorder, width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(9),
+                      child: Image.asset(
+                        'assets/logo.jpeg',
+                        fit: BoxFit.contain,
+                      ),
+                    ),
                   ),
-                  child: const Icon(Icons.water_drop_rounded,
-                      color: Colors.white, size: 18),
                 ),
                 if (expanded) ...[
                   const SizedBox(width: 10),
@@ -222,15 +260,16 @@ class _Sidebar extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Maji Smart',
+                        Text('Smart Meter App',
                             style: TextStyle(
-                                color: AppColors.textPrimary,
+                                color: AppColors.sidebarText,
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 0.3)),
                         Text('Borehole System',
                             style: TextStyle(
-                                color: AppColors.textSub, fontSize: 10)),
+                                color: AppColors.sidebarTextSub,
+                                fontSize: 10)),
                       ],
                     ),
                   ),
@@ -239,27 +278,27 @@ class _Sidebar extends StatelessWidget {
             ),
           ),
 
-          const Divider(color: AppColors.border, height: 1),
+          const Divider(color: AppColors.sidebarBorder, height: 1),
           const SizedBox(height: 8),
 
-          // Nav items
+          // ── Nav items ─────────────────────────────────────
           ...navItems.asMap().entries.map((e) {
             final i    = e.key;
             final item = e.value;
             return _SidebarTile(
-              icon:       item.icon,
-              label:      item.label,
-              selected:   currentIndex == i,
-              expanded:   expanded,
-              onTap:      () => onTap(i),
-              showBadge:  i == 2,
+              icon:      item.icon,
+              label:     item.label,
+              selected:  currentIndex == i,
+              expanded:  expanded,
+              onTap:     () => onTap(i),
+              showBadge: i == 2,
             );
           }),
 
           const Spacer(),
-          const Divider(color: AppColors.border, height: 1),
+          const Divider(color: AppColors.sidebarBorder, height: 1),
 
-          // Collapse toggle
+          // ── Collapse toggle ───────────────────────────────
           InkWell(
             onTap: onToggle,
             child: Container(
@@ -271,37 +310,38 @@ class _Sidebar extends StatelessWidget {
                     expanded
                         ? Icons.chevron_left_rounded
                         : Icons.chevron_right_rounded,
-                    color: AppColors.textSub, size: 20,
+                    color: AppColors.sidebarTextSub,
+                    size: 20,
                   ),
                   if (expanded) ...[
                     const SizedBox(width: 10),
                     const Text('Collapse',
                         style: TextStyle(
-                            color: AppColors.textSub, fontSize: 13)),
+                            color: AppColors.sidebarTextSub, fontSize: 13)),
                   ],
                 ],
               ),
             ),
           ),
 
-          // User pill
+          // ── User pill ────────────────────────────────────
           Container(
             margin:  const EdgeInsets.all(12),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
-              color: AppColors.surfaceAlt,
+              color: AppColors.sidebarSelected,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: AppColors.sidebarBorder),
             ),
             child: Row(
               children: [
                 CircleAvatar(
                   radius: 14,
-                  backgroundColor: AppColors.accentSoft,
+                  backgroundColor: Colors.white.withOpacity(0.2),
                   child: Text(
                     user?.initials ?? '?',
                     style: const TextStyle(
-                        color: AppColors.accent,
+                        color: Colors.white,
                         fontSize: 10,
                         fontWeight: FontWeight.bold),
                   ),
@@ -315,7 +355,7 @@ class _Sidebar extends StatelessWidget {
                         Text(
                           user?.name ?? 'Loading...',
                           style: const TextStyle(
-                              color: AppColors.textPrimary,
+                              color: AppColors.sidebarText,
                               fontSize: 12,
                               fontWeight: FontWeight.w600),
                           overflow: TextOverflow.ellipsis,
@@ -323,7 +363,7 @@ class _Sidebar extends StatelessWidget {
                         Text(
                           user?.role ?? '',
                           style: const TextStyle(
-                              color: AppColors.textSub, fontSize: 10),
+                              color: AppColors.sidebarTextSub, fontSize: 10),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
@@ -338,6 +378,8 @@ class _Sidebar extends StatelessWidget {
     );
   }
 }
+
+// ─── Sidebar Tile ─────────────────────────────────────────────
 
 class _SidebarTile extends StatelessWidget {
   final IconData     icon;
@@ -367,10 +409,12 @@ class _SidebarTile extends StatelessWidget {
           duration: const Duration(milliseconds: 180),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
-            color: selected ? AppColors.accentSoft : Colors.transparent,
+            color: selected
+                ? AppColors.sidebarSelected
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
             border: selected
-                ? Border.all(color: AppColors.accent.withOpacity(0.3))
+                ? Border.all(color: Colors.white.withOpacity(0.15))
                 : null,
           ),
           child: Row(
@@ -378,14 +422,16 @@ class _SidebarTile extends StatelessWidget {
               Stack(clipBehavior: Clip.none, children: [
                 Icon(icon,
                     size: 20,
-                    color: selected ? AppColors.accent : AppColors.textSub),
+                    color: selected
+                        ? Colors.white
+                        : AppColors.sidebarIcon),
                 if (showBadge)
                   Positioned(
                     top: -4, right: -4,
                     child: Container(
                       width: 8, height: 8,
                       decoration: const BoxDecoration(
-                          color: Color(0xFFFF6B6B),
+                          color: Color(0xFFFBBF24),
                           shape: BoxShape.circle),
                     ),
                   ),
@@ -396,8 +442,8 @@ class _SidebarTile extends StatelessWidget {
                   child: Text(label,
                       style: TextStyle(
                           color: selected
-                              ? AppColors.accent
-                              : AppColors.textSub,
+                              ? Colors.white
+                              : AppColors.sidebarTextSub,
                           fontSize: 13,
                           fontWeight: selected
                               ? FontWeight.w600
@@ -408,11 +454,11 @@ class _SidebarTile extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                        color: const Color(0x33FF6B6B),
+                        color: const Color(0xFFFBBF24).withOpacity(0.2),
                         borderRadius: BorderRadius.circular(10)),
                     child: const Text('3',
                         style: TextStyle(
-                            color: Color(0xFFFF6B6B),
+                            color: Color(0xFFFBBF24),
                             fontSize: 10,
                             fontWeight: FontWeight.bold)),
                   ),
@@ -437,10 +483,17 @@ class _TopBar extends StatelessWidget {
     return Container(
       height: 64,
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.surface,
-        border: Border(
+        border: const Border(
             bottom: BorderSide(color: AppColors.border, width: 1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -450,26 +503,30 @@ class _TopBar extends StatelessWidget {
                   fontSize: 16,
                   fontWeight: FontWeight.w600)),
           const Spacer(),
+          // Live status pill
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: AppColors.surfaceAlt,
+              color: const Color(0xFFEFF6FF),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: const Color(0xFFBFD7F5)),
             ),
             child: Row(children: [
               Container(
                 width: 6, height: 6,
                 decoration: const BoxDecoration(
-                    color: Color(0xFF3FB950), shape: BoxShape.circle),
+                    color: Color(0xFF22C55E), shape: BoxShape.circle),
               ),
               const SizedBox(width: 6),
               const Text('Ngara Estate • Live',
                   style: TextStyle(
-                      color: AppColors.textSub, fontSize: 12)),
+                      color: Color(0xFF1D4ED8),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500)),
             ]),
           ),
           const SizedBox(width: 12),
+          // Notifications bell
           Stack(clipBehavior: Clip.none, children: [
             IconButton(
               icon: const Icon(Icons.notifications_outlined,
@@ -481,7 +538,7 @@ class _TopBar extends StatelessWidget {
               child: Container(
                 width: 8, height: 8,
                 decoration: const BoxDecoration(
-                    color: Color(0xFFFF6B6B), shape: BoxShape.circle),
+                    color: Color(0xFFEF4444), shape: BoxShape.circle),
               ),
             ),
           ]),
@@ -507,9 +564,16 @@ class _BottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(top: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: AppColors.sidebarBg,
+        border: const Border(top: BorderSide(color: AppColors.sidebarBorder)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
       ),
       child: SafeArea(
         child: SizedBox(
@@ -526,15 +590,15 @@ class _BottomNav extends StatelessWidget {
                       Icon(e.value.icon,
                           size: 20,
                           color: selected
-                              ? AppColors.accent
-                              : AppColors.textMuted),
+                              ? Colors.white
+                              : AppColors.sidebarTextSub),
                       const SizedBox(height: 3),
                       Text(e.value.label,
                           style: TextStyle(
                               fontSize: 10,
                               color: selected
-                                  ? AppColors.accent
-                                  : AppColors.textMuted,
+                                  ? Colors.white
+                                  : AppColors.sidebarTextSub,
                               fontWeight: selected
                                   ? FontWeight.w600
                                   : FontWeight.normal)),
@@ -558,7 +622,6 @@ class _DashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Use the singleton — no new instance
     final auth = AuthService.instance;
     return ListenableBuilder(
       listenable: auth,

@@ -1,9 +1,31 @@
+// lib/widgets/water_meter_card.dart
+// ignore_for_file: deprecated_member_use, unused_field
 import 'package:flutter/material.dart';
 import 'dart:convert';
-// ignore: depend_on_referenced_packages
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 const String _kBaseUrl = 'http://localhost:3000/api';
+
+// ─── Colours — bright theme ───────────────────────────────────
+class _C {
+  static const bg        = Color(0xFFEFF6FF);
+  static const surface   = Color(0xFFFFFFFF);
+  static const surfaceAlt= Color(0xFFDBEAFE);
+  static const border    = Color(0xFF93C5FD);
+  static const accent    = Color(0xFF1D4ED8);
+  static const accentBg  = Color(0xFFEFF6FF);
+  static const accentBr  = Color(0xFFBFDBFE);
+  static const green     = Color(0xFF15803D);
+  static const greenBg   = Color(0xFFDCFCE7);
+  static const greenBdr  = Color(0xFF86EFAC);
+  static const red       = Color(0xFFDC2626);
+  static const redBg     = Color(0xFFFEE2E2);
+  static const redBdr    = Color(0xFFFCA5A5);
+  static const textPri   = Color(0xFF0F172A);
+  static const textSub   = Color(0xFF334155);
+  static const textMuted = Color(0xFF64748B);
+}
 
 class WaterMeterCard extends StatefulWidget {
   const WaterMeterCard({super.key});
@@ -14,7 +36,7 @@ class WaterMeterCard extends StatefulWidget {
 
 class _WaterMeterCardState extends State<WaterMeterCard> {
   String  _meterName  = 'Main Water Meter';
-  String  _location   = 'Ngara Estate - Block 3 (Borehole Supply)';
+  String  _location   = '';           // loaded from settings
   String  _meterId    = 'NWM-2024-047';
   double  _flowRate   = 12.5;
   int     _todayUsage = 1847;
@@ -26,7 +48,16 @@ class _WaterMeterCardState extends State<WaterMeterCard> {
   @override
   void initState() {
     super.initState();
+    _loadLocation();
     _fetchMeter();
+  }
+
+  // ── Load location from SharedPreferences (set in Settings) ──
+  Future<void> _loadLocation() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _location = prefs.getString('estate_location') ?? '';
+    });
   }
 
   Future<void> _fetchMeter() async {
@@ -38,13 +69,12 @@ class _WaterMeterCardState extends State<WaterMeterCard> {
       if (res.statusCode == 200) {
         final data = json.decode(res.body) as Map<String, dynamic>;
         setState(() {
-          _meterName  = (data['name']       as String?) ?? _meterName;
-          _location   = (data['location']   as String?) ?? _location;
-          _meterId    = (data['meterId']     as String?) ?? _meterId;
-          _flowRate   = (data['flowRate']    as num?)?.toDouble() ?? _flowRate;
-          _todayUsage = (data['todayUsage']  as int?)   ?? _todayUsage;
-          _isFlowing  = (data['isFlowing']   as bool?)  ?? _isFlowing;
-          _updatedAt  = (data['updatedAt']   as String?) ?? _updatedAt;
+          _meterName  = (data['name']      as String?) ?? _meterName;
+          _meterId    = (data['meterId']   as String?) ?? _meterId;
+          _flowRate   = (data['flowRate']  as num?)?.toDouble() ?? _flowRate;
+          _todayUsage = (data['todayUsage']as num?)?.toInt()   ?? _todayUsage;
+          _isFlowing  = (data['isFlowing'] as bool?)  ?? _isFlowing;
+          _updatedAt  = (data['updatedAt'] as String?) ?? _updatedAt;
           _loading    = false;
           _error      = null;
         });
@@ -67,9 +97,7 @@ class _WaterMeterCardState extends State<WaterMeterCard> {
         headers: {'Content-Type': 'application/json'},
         body: json.encode(updates),
       ).timeout(const Duration(seconds: 6));
-    } catch (_) {
-      // Keep local state if offline
-    }
+    } catch (_) {}
   }
 
   void _openEdit() {
@@ -85,17 +113,22 @@ class _WaterMeterCardState extends State<WaterMeterCard> {
           setState(() {
             _meterName  = updated['name']       as String;
             _location   = updated['location']   as String;
-            _meterId    = updated['meterId']     as String;
-            _flowRate   = updated['flowRate']    as double;
-            _todayUsage = updated['todayUsage']  as int;
+            _meterId    = updated['meterId']    as String;
+            _flowRate   = updated['flowRate']   as double;
+            _todayUsage = updated['todayUsage'] as int;
           });
+          // Persist location to prefs
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('estate_location', _location);
           await _saveMeter(updated);
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Meter details saved to database.'),
-              backgroundColor: Color(0xFF1C2333),
+            SnackBar(
+              content: const Text('Meter details saved.'),
+              backgroundColor: _C.accent,
               behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
           );
         },
@@ -107,196 +140,208 @@ class _WaterMeterCardState extends State<WaterMeterCard> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF161B22),
+        color: _C.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF30363D)),
+        border: Border.all(color: _C.border),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1D4ED8).withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Header ──
+
+            // ── Header ──────────────────────────────────────
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0x1F2DD4BF),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.speed_rounded,
-                      color: Color(0xFF2DD4BF), size: 18),
-                ),
-                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(_meterName,
                           style: const TextStyle(
-                            color: Color(0xFFE6EDF3),
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                          )),
-                      Text(_location,
-                          style: const TextStyle(
-                              color: Color(0xFF8B949E), fontSize: 11)),
+                              color: _C.textPri,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.3)),
+                      if (_location.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(_location,
+                            style: const TextStyle(
+                                color: _C.textSub, fontSize: 12)),
+                      ],
+                      const SizedBox(height: 2),
                       Text('Meter ID: $_meterId',
                           style: const TextStyle(
-                              color: Color(0xFF484F58), fontSize: 10)),
+                              color: _C.textMuted, fontSize: 11)),
                     ],
                   ),
                 ),
+
+                // Connection badge
                 Container(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: const Color(0x1F3FB950),
+                    color: _C.greenBg,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0x593FB950)),
+                    border: Border.all(color: _C.greenBdr),
                   ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.wifi_rounded,
-                          color: Color(0xFF3FB950), size: 12),
-                      SizedBox(width: 5),
-                      Text('Connected',
-                          style: TextStyle(
-                              color: Color(0xFF3FB950), fontSize: 11)),
-                    ],
+                  child: Text(
+                    'Connected',
+                    style: TextStyle(
+                        color: _C.green,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600),
                   ),
                 ),
+
                 const SizedBox(width: 8),
-                IconButton(
+
+                // Edit button — text style, no icon
+                TextButton(
                   onPressed: _openEdit,
-                  icon: const Icon(Icons.edit_outlined,
-                      color: Color(0xFF8B949E), size: 18),
-                  tooltip: 'Edit meter details',
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
+                  style: TextButton.styleFrom(
+                    foregroundColor: _C.accent,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text('Edit',
+                      style: TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.w600)),
                 ),
               ],
             ),
 
             const SizedBox(height: 16),
-            const Divider(color: Color(0xFF30363D), height: 1),
+            Divider(color: _C.border, height: 1),
             const SizedBox(height: 16),
 
-            // ── Metrics ──
+            // ── Metrics ─────────────────────────────────────
             if (_loading)
               const Center(
                 child: Padding(
                   padding: EdgeInsets.symmetric(vertical: 16),
                   child: CircularProgressIndicator(
-                      color: Color(0xFF2DD4BF), strokeWidth: 2),
+                      color: _C.accent, strokeWidth: 2),
+                ),
+              )
+            else if (!_isFlowing)
+              // Pump stopped — show stopped state only
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: _C.redBg,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: _C.redBdr),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Pump Stopped',
+                        style: TextStyle(
+                            color: _C.red,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 4),
+                    Text('No water flow detected · Last updated: $_updatedAt',
+                        style: TextStyle(
+                            color: _C.red.withOpacity(0.7),
+                            fontSize: 11)),
+                  ],
                 ),
               )
             else
-              Row(
+              // Pump running — show all metrics
+              Column(
                 children: [
-                  _MeterMetric(
-                    icon: Icons.water_drop_rounded,
-                    label: 'Current Flow Rate',
-                    value: _flowRate.toStringAsFixed(1),
-                    unit: 'L/min',
-                  ),
-                  const SizedBox(width: 10),
-                  _MeterMetric(
-                    icon: Icons.today_rounded,
-                    label: 'Total Usage Today',
-                    value: _todayUsage.toString(),
-                    unit: 'Litres',
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: _isFlowing
-                            ? const Color(0x143FB950)
-                            : const Color(0x1A484F58),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: _isFlowing
-                              ? const Color(0x4D3FB950)
-                              : const Color(0xFF30363D),
-                        ),
+                  Row(
+                    children: [
+                      _Metric(
+                        label: 'Flow Rate',
+                        // ignore: unnecessary_string_interpolations
+                        value: '${_flowRate.toStringAsFixed(1)}',
+                        unit: 'L/min',
+                        color: _C.accent,
+                        bg: _C.accentBg,
+                        borderColor: _C.accentBr,
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                width: 7,
-                                height: 7,
-                                decoration: BoxDecoration(
-                                  color: _isFlowing
-                                      ? const Color(0xFF3FB950)
-                                      : const Color(0xFF484F58),
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 5),
-                              const Text('Status',
-                                  style: TextStyle(
-                                      color: Color(0xFF8B949E),
-                                      fontSize: 10)),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            _isFlowing ? 'Water Flowing' : 'No Flow',
-                            style: TextStyle(
-                              color: _isFlowing
-                                  ? const Color(0xFF3FB950)
-                                  : const Color(0xFF8B949E),
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          Text('Updated: $_updatedAt',
-                              style: const TextStyle(
-                                  color: Color(0xFF484F58), fontSize: 10)),
-                        ],
+                      const SizedBox(width: 10),
+                      _Metric(
+                        label: 'Usage Today',
+                        value: '$_todayUsage',
+                        unit: 'Litres',
+                        color: _C.accent,
+                        bg: _C.accentBg,
+                        borderColor: _C.accentBr,
                       ),
-                    ),
+                      const SizedBox(width: 10),
+                      _Metric(
+                        label: 'Status',
+                        value: 'Flowing',
+                        unit: 'Updated: $_updatedAt',
+                        color: _C.green,
+                        bg: _C.greenBg,
+                        borderColor: _C.greenBdr,
+                      ),
+                    ],
                   ),
                 ],
               ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
 
-            // ── Footer ──
+            // ── Footer ──────────────────────────────────────
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 14, vertical: 9),
               decoration: BoxDecoration(
-                color: const Color(0xFF0D1117),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFF30363D)),
+                color: _C.bg,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: _C.border),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.circle, size: 6, color: Color(0xFF3FB950)),
-                  const SizedBox(width: 3),
-                  const Icon(Icons.circle, size: 6, color: Color(0xFF3FB950)),
-                  const SizedBox(width: 3),
-                  const Icon(Icons.circle, size: 6, color: Color(0xFFF0A500)),
-                  const SizedBox(width: 8),
+                  // Live pulse dots
+                  Row(
+                    children: List.generate(3, (i) => Container(
+                      margin: const EdgeInsets.only(right: 4),
+                      width: 6, height: 6,
+                      decoration: BoxDecoration(
+                        color: i < 2 ? _C.green : const Color(0xFFF59E0B),
+                        shape: BoxShape.circle,
+                      ),
+                    )),
+                  ),
+                  const SizedBox(width: 6),
                   const Text('Data Transmission Active',
                       style: TextStyle(
-                          fontSize: 11, color: Color(0xFF8B949E))),
+                          fontSize: 11,
+                          color: _C.textSub,
+                          fontWeight: FontWeight.w500)),
                   const Spacer(),
                   if (_error != null)
                     Text(_error!,
-                        style: const TextStyle(
-                            fontSize: 10, color: Color(0xFFFF6B6B)))
+                        style: TextStyle(fontSize: 10, color: _C.red))
                   else
-                    const Text('4G · MongoDB Sync',
-                        style: TextStyle(
-                            fontSize: 10, color: Color(0xFF484F58))),
+                    Text(
+                      _isFlowing ? 'Live · Firebase Sync' : 'Pump Off',
+                      style: TextStyle(
+                          fontSize: 10,
+                          color: _isFlowing ? _C.textMuted : _C.red,
+                          fontWeight: FontWeight.w500),
+                    ),
                 ],
               ),
             ),
@@ -307,19 +352,23 @@ class _WaterMeterCardState extends State<WaterMeterCard> {
   }
 }
 
-/* ── Metric tile ── */
+// ─── Metric tile ─────────────────────────────────────────────
 
-class _MeterMetric extends StatelessWidget {
-  final IconData icon;
+class _Metric extends StatelessWidget {
   final String label;
   final String value;
   final String unit;
+  final Color  color;
+  final Color  bg;
+  final Color  borderColor;
 
-  const _MeterMetric({
-    required this.icon,
+  const _Metric({
     required this.label,
     required this.value,
     required this.unit,
+    required this.color,
+    required this.bg,
+    required this.borderColor,
   });
 
   @override
@@ -328,34 +377,30 @@ class _MeterMetric extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: const Color(0xFF0D1117),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFF30363D)),
+          color: bg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: borderColor),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(icon, color: const Color(0xFF2DD4BF), size: 14),
-                const SizedBox(width: 5),
-                Expanded(
-                  child: Text(label,
-                      style: const TextStyle(
-                          color: Color(0xFF8B949E), fontSize: 10)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
+            Text(label,
+                style: TextStyle(
+                    color: color.withOpacity(0.75),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.3)),
+            const SizedBox(height: 5),
             Text(value,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFFE6EDF3),
-                )),
+                style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: color,
+                    letterSpacing: -0.5)),
             Text(unit,
-                style: const TextStyle(
-                    color: Color(0xFF8B949E), fontSize: 11)),
+                style: TextStyle(
+                    color: color.withOpacity(0.6),
+                    fontSize: 10)),
           ],
         ),
       ),
@@ -363,14 +408,14 @@ class _MeterMetric extends StatelessWidget {
   }
 }
 
-/* ── Edit Dialog ── */
+// ─── Edit Dialog ─────────────────────────────────────────────
 
 class _EditMeterDialog extends StatefulWidget {
   final String name;
   final String location;
   final String meterId;
   final double flowRate;
-  final int todayUsage;
+  final int    todayUsage;
   final Future<void> Function(Map<String, dynamic>) onSave;
 
   const _EditMeterDialog({
@@ -406,11 +451,8 @@ class _EditMeterDialogState extends State<_EditMeterDialog> {
 
   @override
   void dispose() {
-    _nameCtrl.dispose();
-    _locationCtrl.dispose();
-    _meterIdCtrl.dispose();
-    _flowCtrl.dispose();
-    _todayCtrl.dispose();
+    _nameCtrl.dispose(); _locationCtrl.dispose(); _meterIdCtrl.dispose();
+    _flowCtrl.dispose(); _todayCtrl.dispose();
     super.dispose();
   }
 
@@ -429,7 +471,7 @@ class _EditMeterDialogState extends State<_EditMeterDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: const Color(0xFF161B22),
+      backgroundColor: _C.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -437,70 +479,61 @@ class _EditMeterDialogState extends State<_EditMeterDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Title
+            // Title row
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(7),
-                  decoration: BoxDecoration(
-                    color: const Color(0x1F2DD4BF),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(Icons.edit_rounded,
-                      color: Color(0xFF2DD4BF), size: 16),
-                ),
-                const SizedBox(width: 10),
                 const Expanded(
                   child: Text('Edit Meter Details',
                       style: TextStyle(
-                        color: Color(0xFFE6EDF3),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      )),
+                          color: _C.textPri,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700)),
                 ),
-                IconButton(
+                TextButton(
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close_rounded,
-                      color: Color(0xFF8B949E), size: 20),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
+                  style: TextButton.styleFrom(
+                    foregroundColor: _C.textSub,
+                    minimumSize: Size.zero,
+                    padding: EdgeInsets.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text('Close'),
                 ),
               ],
             ),
             const SizedBox(height: 4),
             const Text(
-              'Changes are saved to MongoDB and reflected across all users.',
-              style: TextStyle(color: Color(0xFF484F58), fontSize: 11),
+              'Location entered here will also appear in the top bar.',
+              style: TextStyle(color: _C.textMuted, fontSize: 11),
             ),
             const SizedBox(height: 16),
-            const Divider(color: Color(0xFF30363D), height: 1),
+            Divider(color: _C.border, height: 1),
             const SizedBox(height: 16),
 
-            _Field(label: 'Meter Name', ctrl: _nameCtrl,
-                hint: 'e.g. Main Water Meter'),
+            _Field(label: 'Meter Name',
+                ctrl: _nameCtrl, hint: 'e.g. Main Water Meter'),
             const SizedBox(height: 12),
-            _Field(label: 'Location', ctrl: _locationCtrl,
-                hint: 'e.g. Block 3, Ngara Estate'),
+            _Field(label: 'Location (Estate / Site)',
+                ctrl: _locationCtrl, hint: 'e.g. Ngara Estate, Block 3'),
             const SizedBox(height: 12),
-            _Field(label: 'Meter ID', ctrl: _meterIdCtrl,
-                hint: 'e.g. NWM-2024-047'),
+            _Field(label: 'Meter ID',
+                ctrl: _meterIdCtrl, hint: 'e.g. NWM-2024-047'),
             const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
                   child: _Field(
                     label: 'Flow Rate (L/min)',
-                    ctrl: _flowCtrl,
-                    hint: '12.5',
-                    keyboard: const TextInputType.numberWithOptions(decimal: true),
+                    ctrl: _flowCtrl, hint: '12.5',
+                    keyboard: const TextInputType.numberWithOptions(
+                        decimal: true),
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: _Field(
                     label: 'Today Usage (L)',
-                    ctrl: _todayCtrl,
-                    hint: '1847',
+                    ctrl: _todayCtrl, hint: '1847',
                     keyboard: TextInputType.number,
                   ),
                 ),
@@ -514,8 +547,8 @@ class _EditMeterDialogState extends State<_EditMeterDialog> {
                   child: OutlinedButton(
                     onPressed: () => Navigator.pop(context),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF8B949E),
-                      side: const BorderSide(color: Color(0xFF30363D)),
+                      foregroundColor: _C.textSub,
+                      side: BorderSide(color: _C.border),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10)),
@@ -528,8 +561,8 @@ class _EditMeterDialogState extends State<_EditMeterDialog> {
                   child: ElevatedButton(
                     onPressed: _saving ? null : _submit,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2DD4BF),
-                      foregroundColor: const Color(0xFF0D1117),
+                      backgroundColor: _C.accent,
+                      foregroundColor: Colors.white,
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
@@ -537,14 +570,12 @@ class _EditMeterDialogState extends State<_EditMeterDialog> {
                     ),
                     child: _saving
                         ? const SizedBox(
-                            width: 16,
-                            height: 16,
+                            width: 16, height: 16,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Color(0xFF0D1117)),
-                          )
-                        : const Text('Save to DB',
-                            style: TextStyle(fontWeight: FontWeight.w700)),
+                                strokeWidth: 2, color: Colors.white))
+                        : const Text('Save',
+                            style:
+                                TextStyle(fontWeight: FontWeight.w700)),
                   ),
                 ),
               ],
@@ -556,13 +587,13 @@ class _EditMeterDialogState extends State<_EditMeterDialog> {
   }
 }
 
-/* ── Text field helper ── */
+// ─── Field helper ─────────────────────────────────────────────
 
 class _Field extends StatelessWidget {
-  final String label;
+  final String                label;
   final TextEditingController ctrl;
-  final String hint;
-  final TextInputType keyboard;
+  final String                hint;
+  final TextInputType         keyboard;
 
   const _Field({
     required this.label,
@@ -578,32 +609,32 @@ class _Field extends StatelessWidget {
       children: [
         Text(label,
             style: const TextStyle(
-                color: Color(0xFF8B949E),
+                color: _C.textSub,
                 fontSize: 11,
-                fontWeight: FontWeight.w500)),
+                fontWeight: FontWeight.w600)),
         const SizedBox(height: 5),
         TextField(
           controller: ctrl,
           keyboardType: keyboard,
-          style: const TextStyle(color: Color(0xFFE6EDF3), fontSize: 13),
+          style: const TextStyle(color: _C.textPri, fontSize: 13),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: Color(0xFF484F58)),
+            hintStyle: const TextStyle(color: _C.textMuted),
             filled: true,
-            fillColor: const Color(0xFF0D1117),
+            fillColor: _C.bg,
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF30363D)),
+              borderSide: BorderSide(color: _C.border),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF30363D)),
+              borderSide: BorderSide(color: _C.border),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: Color(0xFF2DD4BF)),
+              borderSide: const BorderSide(color: _C.accent, width: 1.5),
             ),
           ),
         ),

@@ -9,7 +9,7 @@ android {
     namespace = "com.example.smart_app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
-
+Remove-Item -Recurse -Force "build"
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

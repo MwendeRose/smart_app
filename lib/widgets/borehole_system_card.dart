@@ -1,58 +1,98 @@
+// lib/widgets/borehole_system_card.dart
 // ignore_for_file: deprecated_member_use
-
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class BoreholeSystemCard extends StatelessWidget {
+// ─── Colours — bright theme ───────────────────────────────────
+class _C {
+  static const bg        = Color(0xFFEFF6FF);
+  static const surface   = Color(0xFFFFFFFF);
+  static const surfaceAlt= Color(0xFFDBEAFE);
+  static const border    = Color(0xFF93C5FD);
+  static const accent    = Color(0xFF1D4ED8);
+  static const accentBg  = Color(0xFFEFF6FF);
+  static const accentBr  = Color(0xFFBFDBFE);
+  static const green     = Color(0xFF15803D);
+  static const greenBg   = Color(0xFFDCFCE7);
+  static const greenBdr  = Color(0xFF86EFAC);
+  static const red       = Color(0xFFDC2626);
+  static const redBg     = Color(0xFFFEE2E2);
+  static const redBdr    = Color(0xFFFCA5A5);
+  static const textPri   = Color(0xFF0F172A);
+  static const textSub   = Color(0xFF334155);
+  static const textMuted = Color(0xFF64748B);
+}
+
+class BoreholeSystemCard extends StatefulWidget {
   const BoreholeSystemCard({super.key});
 
-  void _showSnack(BuildContext context, String message) {
+  @override
+  State<BoreholeSystemCard> createState() => _BoreholeSystemCardState();
+}
+
+class _BoreholeSystemCardState extends State<BoreholeSystemCard> {
+  bool   _pumpRunning = true;
+  String _location    = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLocation();
+  }
+
+  Future<void> _loadLocation() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _location = prefs.getString('estate_location') ?? '';
+    });
+  }
+
+  void _snack(String msg, {bool success = true}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
-        backgroundColor: const Color(0xFF1C2333),
+        content: Text(msg,
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.w500)),
+        backgroundColor: success ? _C.green : _C.red,
         behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
 
-  void _showScheduleDialog(BuildContext context) {
+  void _showScheduleDialog() {
     showDialog(
       context: context,
       builder: (_) => const _ScheduleDialog(),
     );
   }
 
-  void _showStopConfirm(BuildContext context) {
-    showDialog(
+  void _showStopConfirm() {
+    showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF161B22),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: const Row(
-          children: [
-            Icon(Icons.stop_circle_outlined, color: Color(0xFFFF6B6B), size: 20),
-            SizedBox(width: 8),
-            Text('Stop Pump',
-                style: TextStyle(color: Color(0xFFE6EDF3), fontSize: 16)),
-          ],
-        ),
+        backgroundColor: _C.surface,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: const Text('Stop Pump',
+            style: TextStyle(
+                color: _C.textPri,
+                fontSize: 16,
+                fontWeight: FontWeight.w700)),
         content: const Text(
           'Are you sure you want to stop the pump? This will halt water supply to all units.',
-          style: TextStyle(color: Color(0xFF8B949E), fontSize: 13, height: 1.5),
+          style: TextStyle(color: _C.textSub, fontSize: 13, height: 1.5),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel',
-                style: TextStyle(color: Color(0xFF8B949E))),
+                style: TextStyle(color: _C.textSub)),
           ),
           ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _showSnack(context, 'Pump stopped successfully.');
-            },
+            onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF6B6B),
+              backgroundColor: _C.red,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8)),
@@ -61,250 +101,304 @@ class BoreholeSystemCard extends StatelessWidget {
           ),
         ],
       ),
-    );
+    ).then((confirmed) {
+      if (confirmed != true) return;
+      setState(() => _pumpRunning = false);
+      _snack('Pump stopped successfully.');
+    });
+  }
+
+  void _startPump() {
+    setState(() => _pumpRunning = true);
+    _snack('Pump started successfully.');
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF161B22),
+        color: _C.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF30363D)),
+        border: Border.all(color: _C.border),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1D4ED8).withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Header ──
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        // ignore: duplicate_ignore
-                        // ignore: deprecated_member_use
-                        color: const Color(0xFF2DD4BF).withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.water_drop_rounded,
-                          color: Color(0xFF2DD4BF), size: 18),
-                    ),
-                    const SizedBox(width: 10),
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Borehole System',
-                            style: TextStyle(
-                              color: Color(0xFFE6EDF3),
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                            )),
-                        Text('Ngara Estate · Private Water Supply',
-                            style: TextStyle(
-                                color: Color(0xFF8B949E), fontSize: 11)),
-                      ],
-                    ),
-                  ],
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF3FB950).withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                        color: const Color(0xFF3FB950).withOpacity(0.4)),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.circle,
-                          color: Color(0xFF3FB950), size: 7),
-                      SizedBox(width: 5),
-                      Text('Pump Running',
-                          style: TextStyle(
-                            color: Color(0xFF3FB950),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          )),
-                    ],
-                  ),
-                ),
-              ],
-            ),
 
-            const SizedBox(height: 16),
-            const Divider(color: Color(0xFF30363D), height: 1),
-            const SizedBox(height: 16),
-
-            // ── Stats grid ──
-            Row(
-              children: [
-                _StatCard(
-                  icon: Icons.vertical_align_bottom_rounded,
-                  label: 'Borehole Level',
-                  value: '18.5m',
-                  sub: 'below ground',
-                  progress: 0.70,
-                  progressColor: const Color(0xFF3FB950),
-                ),
-                const SizedBox(width: 10),
-                _StatCard(
-                  icon: Icons.water_rounded,
-                  label: 'Storage Tank',
-                  value: '7,200 L',
-                  sub: 'of 10,000 L',
-                  progress: 0.72,
-                  progressColor: const Color(0xFF2DD4BF),
-                ),
-                const SizedBox(width: 10),
-                _StatCard(
-                  icon: Icons.bolt_rounded,
-                  label: 'Current Power',
-                  value: '2.2 kW',
-                  sub: 'Active consumption',
-                  pillColor: const Color(0xFF3FB950),
-                ),
-                const SizedBox(width: 10),
-                _StatCard(
-                  icon: Icons.timer_outlined,
-                  label: 'Runtime Today',
-                  value: '4.2 hrs',
-                  sub: '26 hrs this month',
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 16),
-
-            // ── System Info + Controls ──
+            // ── Header ──────────────────────────────────────
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // System Info
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0D1117),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFF30363D)),
-                    ),
-                    child: const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('System Information',
-                            style: TextStyle(
-                              color: Color(0xFFE6EDF3),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            )),
-                        SizedBox(height: 10),
-                        _InfoRow(
-                            label: 'Water Quality',
-                            value: 'Good',
-                            valueColor: Color(0xFF3FB950)),
-                        _InfoRow(
-                            label: 'Monthly Energy Cost',
-                            value: 'KES 2,142'),
-                        _InfoRow(
-                            label: 'Last Maintenance',
-                            value: '04 Jan 2026'),
-                        _InfoRow(
-                            label: 'Pump Type',
-                            value: 'Submersible 2.2kW'),
-                        _InfoRow(
-                            label: 'Connection',
-                            value: '4G · Encrypted'),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(width: 10),
-
-                // Controls
                 Expanded(
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Stop Pump
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: () => _showStopConfirm(context),
-                          icon: const Icon(Icons.stop_circle_outlined,
-                              size: 16),
-                          label: const Text('Stop Pump'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFF6B6B)
-                                .withOpacity(0.15),
-                            foregroundColor: const Color(0xFFFF6B6B),
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            side: BorderSide(
-                                color: const Color(0xFFFF6B6B)
-                                    .withOpacity(0.4)),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10)),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Schedule Auto-Run
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: () => _showScheduleDialog(context),
-                          icon: const Icon(Icons.schedule_rounded, size: 16),
-                          label: const Text('Schedule Auto-Run'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFF2DD4BF),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            side: BorderSide(
-                                color: const Color(0xFF2DD4BF)
-                                    .withOpacity(0.4)),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10)),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 10),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 7),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF0D1117),
-                          borderRadius: BorderRadius.circular(8),
-                          border:
-                              Border.all(color: const Color(0xFF30363D)),
-                        ),
-                        child: const Row(
-                          children: [
-                            Icon(Icons.info_outline_rounded,
-                                size: 12, color: Color(0xFF484F58)),
-                            SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                'Auto-run: OFF · 4G: beam (SIM-SAM)',
-                                style: TextStyle(
-                                    color: Color(0xFF484F58),
-                                    fontSize: 10),
-                              ),
-                            ),
-                          ],
-                        ),
+                      const Text('Borehole System',
+                          style: TextStyle(
+                              color: _C.textPri,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.3)),
+                      const SizedBox(height: 2),
+                      Text(
+                        _location.isNotEmpty
+                            ? '$_location · Private Water Supply'
+                            : 'Private Water Supply',
+                        style: const TextStyle(
+                            color: _C.textSub, fontSize: 12),
                       ),
                     ],
                   ),
                 ),
+
+                // Status badge — shows current pump state
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _pumpRunning ? _C.greenBg : _C.redBg,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                        color: _pumpRunning ? _C.greenBdr : _C.redBdr),
+                  ),
+                  child: Text(
+                    _pumpRunning ? 'Pump Running' : 'Pump Stopped',
+                    style: TextStyle(
+                        color: _pumpRunning ? _C.green : _C.red,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700),
+                  ),
+                ),
               ],
             ),
+
+            const SizedBox(height: 16),
+            Divider(color: _C.border, height: 1),
+            const SizedBox(height: 16),
+
+            // ── Body — changes based on pump state ───────────
+            if (_pumpRunning) ...[
+
+              // Stats grid
+              Row(
+                children: [
+                  _StatCard(
+                    label: 'Borehole Level',
+                    value: '18.5m',
+                    sub: 'below ground',
+                    progress: 0.70,
+                    progressColor: _C.green,
+                  ),
+                  const SizedBox(width: 10),
+                  _StatCard(
+                    label: 'Storage Tank',
+                    value: '7,200 L',
+                    sub: 'of 10,000 L',
+                    progress: 0.72,
+                    progressColor: _C.accent,
+                  ),
+                  const SizedBox(width: 10),
+                  _StatCard(
+                    label: 'Current Power',
+                    value: '2.2 kW',
+                    sub: 'Active consumption',
+                    activePill: true,
+                  ),
+                  const SizedBox(width: 10),
+                  _StatCard(
+                    label: 'Runtime Today',
+                    value: '4.2 hrs',
+                    sub: '26 hrs this month',
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 16),
+
+              // System info + controls
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // System info panel
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: _C.accentBg,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: _C.accentBr),
+                      ),
+                      child: const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('System Information',
+                              style: TextStyle(
+                                  color: _C.textPri,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700)),
+                          SizedBox(height: 10),
+                          _InfoRow(
+                              label: 'Water Quality',
+                              value: 'Good',
+                              valueColor: _C.green),
+                          _InfoRow(
+                              label: 'Monthly Energy Cost',
+                              value: 'KES 2,142'),
+                          _InfoRow(
+                              label: 'Last Maintenance',
+                              value: '04 Jan 2026'),
+                          _InfoRow(
+                              label: 'Pump Type',
+                              value: 'Submersible 2.2kW'),
+                          _InfoRow(
+                              label: 'Connection',
+                              value: '4G · Encrypted'),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(width: 10),
+
+                  // Controls
+                  Expanded(
+                    child: Column(
+                      children: [
+                        // Stop Pump
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _showStopConfirm,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _C.redBg,
+                              foregroundColor: _C.red,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 13),
+                              side: const BorderSide(color: _C.redBdr),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10)),
+                            ),
+                            child: const Text('Stop Pump',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13)),
+                          ),
+                        ),
+
+                        const SizedBox(height: 8),
+
+                        // Schedule
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton(
+                            onPressed: _showScheduleDialog,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: _C.accent,
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 13),
+                              side: const BorderSide(color: _C.accentBr),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10)),
+                            ),
+                            child: const Text('Schedule Auto-Run',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13)),
+                          ),
+                        ),
+
+                        const SizedBox(height: 10),
+
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: _C.bg,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: _C.border),
+                          ),
+                          child: const Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Auto-run: OFF · 4G: beam (SIM-SAM)',
+                                  style: TextStyle(
+                                      color: _C.textMuted, fontSize: 10),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+            ] else ...[
+
+              // ── Pump stopped state ───────────────────────
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 18),
+                decoration: BoxDecoration(
+                  color: _C.redBg,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: _C.redBdr),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Pump is currently offline',
+                        style: TextStyle(
+                            color: _C.red,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 6),
+                    Text(
+                      'All stats are hidden while the pump is stopped.\nStart the pump to resume monitoring.',
+                      style: TextStyle(
+                          color: _C.red.withOpacity(0.75),
+                          fontSize: 12,
+                          height: 1.5),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              // Start pump button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _startPump,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _C.greenBg,
+                    foregroundColor: _C.green,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    side: const BorderSide(color: _C.greenBdr),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text('Start Pump',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w700, fontSize: 14)),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -312,25 +406,23 @@ class BoreholeSystemCard extends StatelessWidget {
   }
 }
 
-/* ── Stat Card ── */
+// ─── Stat Card ────────────────────────────────────────────────
 
 class _StatCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  final String sub;
+  final String  label;
+  final String  value;
+  final String  sub;
   final double? progress;
-  final Color? progressColor;
-  final Color? pillColor;
+  final Color?  progressColor;
+  final bool    activePill;
 
   const _StatCard({
-    required this.icon,
     required this.label,
     required this.value,
     required this.sub,
     this.progress,
     this.progressColor,
-    this.pillColor,
+    this.activePill = false,
   });
 
   @override
@@ -339,53 +431,59 @@ class _StatCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: const Color(0xFF0D1117),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFF30363D)),
+          color: _C.accentBg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: _C.accentBr),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: const Color(0xFF2DD4BF), size: 16),
-            const SizedBox(height: 6),
             Text(label,
                 style: const TextStyle(
-                    color: Color(0xFF8B949E), fontSize: 10)),
-            const SizedBox(height: 4),
+                    color: _C.textMuted,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600)),
+            const SizedBox(height: 5),
             Text(value,
                 style: const TextStyle(
-                  color: Color(0xFFE6EDF3),
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                )),
-            const SizedBox(height: 2),
+                    color: _C.textPri,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.3)),
+            const SizedBox(height: 4),
             if (progress != null) ...[
               ClipRRect(
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
                   value: progress,
-                  backgroundColor: const Color(0xFF30363D),
+                  backgroundColor: _C.border,
                   valueColor: AlwaysStoppedAnimation<Color>(
-                      progressColor ?? const Color(0xFF2DD4BF)),
+                      progressColor ?? _C.accent),
                   minHeight: 4,
                 ),
               ),
               const SizedBox(height: 4),
             ],
-            if (pillColor != null)
+            if (activePill) ...[
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: pillColor!.withOpacity(0.15),
+                  color: _C.greenBg,
                   borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: _C.greenBdr),
                 ),
-                child: Text('Active',
-                    style: TextStyle(color: pillColor, fontSize: 9)),
+                child: const Text('Active',
+                    style: TextStyle(
+                        color: _C.green,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w600)),
               ),
+              const SizedBox(height: 2),
+            ],
             Text(sub,
                 style: const TextStyle(
-                    color: Color(0xFF484F58), fontSize: 9)),
+                    color: _C.textMuted, fontSize: 9)),
           ],
         ),
       ),
@@ -393,7 +491,7 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-/* ── Info Row ── */
+// ─── Info Row ─────────────────────────────────────────────────
 
 class _InfoRow extends StatelessWidget {
   final String label;
@@ -415,22 +513,19 @@ class _InfoRow extends StatelessWidget {
         children: [
           Text(label,
               style: const TextStyle(
-                  color: Color(0xFF8B949E), fontSize: 11)),
+                  color: _C.textSub, fontSize: 11)),
           Text(value,
               style: TextStyle(
-                color: valueColor ?? const Color(0xFFE6EDF3),
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-              )),
+                  color: valueColor ?? _C.textPri,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600)),
         ],
       ),
     );
   }
 }
 
-/* ══════════════════════════════════════════════════════════════
-   Schedule Dialog
-══════════════════════════════════════════════════════════════ */
+// ─── Schedule Dialog ─────────────────────────────────────────
 
 class _ScheduleDialog extends StatefulWidget {
   const _ScheduleDialog();
@@ -440,20 +535,23 @@ class _ScheduleDialog extends StatefulWidget {
 }
 
 class _ScheduleDialogState extends State<_ScheduleDialog> {
-  DateTime _startDate = DateTime.now();
-  TimeOfDay _startTime = const TimeOfDay(hour: 6, minute: 0);
-  TimeOfDay _stopTime = const TimeOfDay(hour: 8, minute: 0);
-  bool _repeat = false;
-  String _repeatFreq = 'Daily';
+  DateTime  _startDate  = DateTime.now();
+  TimeOfDay _startTime  = const TimeOfDay(hour: 6, minute: 0);
+  TimeOfDay _stopTime   = const TimeOfDay(hour: 8, minute: 0);
+  bool      _repeat     = false;
+  String    _repeatFreq = 'Daily';
 
-  final List<String> _freqOptions = ['Daily', 'Weekdays', 'Weekends', 'Weekly'];
+  final List<String> _freqOptions = [
+    'Daily', 'Weekdays', 'Weekends', 'Weekly'
+  ];
 
   String _fmtDate(DateTime d) =>
-      '${d.day.toString().padLeft(2, '0')} / ${d.month.toString().padLeft(2, '0')} / ${d.year}';
+      '${d.day.toString().padLeft(2, '0')} / '
+      '${d.month.toString().padLeft(2, '0')} / ${d.year}';
 
   String _fmtTime(TimeOfDay t) {
-    final h = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
-    final m = t.minute.toString().padLeft(2, '0');
+    final h      = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
+    final m      = t.minute.toString().padLeft(2, '0');
     final period = t.period == DayPeriod.am ? 'AM' : 'PM';
     return '$h:$m $period';
   }
@@ -465,11 +563,9 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
       builder: (ctx, child) => Theme(
-        data: ThemeData.dark().copyWith(
-          colorScheme: const ColorScheme.dark(
-            primary: Color(0xFF2DD4BF),
-            surface: Color(0xFF161B22),
-          ),
+        data: ThemeData.light().copyWith(
+          colorScheme: const ColorScheme.light(
+              primary: Color(0xFF1D4ED8)),
         ),
         child: child!,
       ),
@@ -482,11 +578,9 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
       context: context,
       initialTime: _startTime,
       builder: (ctx, child) => Theme(
-        data: ThemeData.dark().copyWith(
-          colorScheme: const ColorScheme.dark(
-            primary: Color(0xFF2DD4BF),
-            surface: Color(0xFF161B22),
-          ),
+        data: ThemeData.light().copyWith(
+          colorScheme: const ColorScheme.light(
+              primary: Color(0xFF1D4ED8)),
         ),
         child: child!,
       ),
@@ -499,11 +593,9 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
       context: context,
       initialTime: _stopTime,
       builder: (ctx, child) => Theme(
-        data: ThemeData.dark().copyWith(
-          colorScheme: const ColorScheme.dark(
-            primary: Color(0xFF2DD4BF),
-            surface: Color(0xFF161B22),
-          ),
+        data: ThemeData.light().copyWith(
+          colorScheme: const ColorScheme.light(
+              primary: Color(0xFF1D4ED8)),
         ),
         child: child!,
       ),
@@ -514,8 +606,9 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: const Color(0xFF161B22),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      backgroundColor: _C.surface,
+      shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -525,62 +618,53 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
             // Title
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(7),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2DD4BF).withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(Icons.schedule_rounded,
-                      color: Color(0xFF2DD4BF), size: 18),
+                const Expanded(
+                  child: Text('Schedule Auto-Run',
+                      style: TextStyle(
+                          color: _C.textPri,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700)),
                 ),
-                const SizedBox(width: 10),
-                const Text('Schedule Auto-Run',
-                    style: TextStyle(
-                      color: Color(0xFFE6EDF3),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    )),
-                const Spacer(),
-                IconButton(
+                TextButton(
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close_rounded,
-                      color: Color(0xFF8B949E), size: 20),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
+                  style: TextButton.styleFrom(
+                    foregroundColor: _C.textSub,
+                    minimumSize: Size.zero,
+                    padding: EdgeInsets.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text('Close'),
                 ),
               ],
             ),
 
-            const SizedBox(height: 20),
-            const Divider(color: Color(0xFF30363D), height: 1),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
+            Divider(color: _C.border, height: 1),
+            const SizedBox(height: 16),
 
             // Start Date
-            const _FieldLabel('Start Date'),
+            _FieldLabel('Start Date'),
             const SizedBox(height: 6),
             _PickerTile(
-              icon: Icons.calendar_today_rounded,
               value: _fmtDate(_startDate),
               onTap: _pickDate,
             ),
 
             const SizedBox(height: 14),
 
-            // Start & Stop Time
+            // Times
             Row(
               children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const _FieldLabel('Start Time'),
+                      _FieldLabel('Start Time'),
                       const SizedBox(height: 6),
                       _PickerTile(
-                        icon: Icons.play_arrow_rounded,
-                        iconColor: const Color(0xFF3FB950),
                         value: _fmtTime(_startTime),
                         onTap: _pickStartTime,
+                        valueColor: _C.green,
                       ),
                     ],
                   ),
@@ -590,13 +674,12 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const _FieldLabel('Stop Time'),
+                      _FieldLabel('Stop Time'),
                       const SizedBox(height: 6),
                       _PickerTile(
-                        icon: Icons.stop_rounded,
-                        iconColor: const Color(0xFFFF6B6B),
                         value: _fmtTime(_stopTime),
                         onTap: _pickStopTime,
+                        valueColor: _C.red,
                       ),
                     ],
                   ),
@@ -608,59 +691,52 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
 
             // Repeat toggle
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 14, vertical: 4),
               decoration: BoxDecoration(
-                color: const Color(0xFF0D1117),
+                color: _C.accentBg,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFF30363D)),
+                border: Border.all(color: _C.accentBr),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.repeat_rounded,
-                      color: Color(0xFF8B949E), size: 16),
-                  const SizedBox(width: 8),
                   const Text('Repeat',
                       style: TextStyle(
-                          color: Color(0xFFE6EDF3), fontSize: 13)),
+                          color: _C.textPri,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600)),
                   const Spacer(),
                   Switch(
                     value: _repeat,
                     onChanged: (v) => setState(() => _repeat = v),
-                    activeColor: const Color(0xFF2DD4BF),
-                    activeTrackColor:
-                        const Color(0xFF2DD4BF).withOpacity(0.3),
-                    inactiveThumbColor: const Color(0xFF484F58),
-                    inactiveTrackColor: const Color(0xFF30363D),
+                    activeColor: _C.accent,
                   ),
                 ],
               ),
             ),
 
-            // Repeat frequency (only when repeat is on)
             if (_repeat) ...[
               const SizedBox(height: 10),
               Container(
                 padding: const EdgeInsets.symmetric(
                     horizontal: 14, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF0D1117),
+                  color: _C.accentBg,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFF30363D)),
+                  border: Border.all(color: _C.accentBr),
                 ),
                 child: Row(
                   children: [
                     const Text('Frequency',
                         style: TextStyle(
-                            color: Color(0xFF8B949E), fontSize: 13)),
+                            color: _C.textSub, fontSize: 13)),
                     const Spacer(),
                     DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
                         value: _repeatFreq,
-                        dropdownColor: const Color(0xFF1C2333),
+                        dropdownColor: _C.surface,
                         style: const TextStyle(
-                            color: Color(0xFF2DD4BF), fontSize: 13),
-                        icon: const Icon(Icons.keyboard_arrow_down_rounded,
-                            color: Color(0xFF2DD4BF), size: 18),
+                            color: _C.accent, fontSize: 13),
                         items: _freqOptions
                             .map((f) => DropdownMenuItem(
                                 value: f, child: Text(f)))
@@ -674,40 +750,43 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
               ),
             ],
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
-            // Summary chip
+            // Summary
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFF2DD4BF).withOpacity(0.08),
+                color: _C.surfaceAlt,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                    color: const Color(0xFF2DD4BF).withOpacity(0.25)),
+                border: Border.all(color: _C.accentBr),
               ),
               child: Text(
                 _repeat
-                    ? '$_repeatFreq · ${_fmtTime(_startTime)} → ${_fmtTime(_stopTime)} starting ${_fmtDate(_startDate)}'
-                    : 'Once on ${_fmtDate(_startDate)} · ${_fmtTime(_startTime)} → ${_fmtTime(_stopTime)}',
+                    ? '$_repeatFreq · ${_fmtTime(_startTime)} → '
+                        '${_fmtTime(_stopTime)} starting ${_fmtDate(_startDate)}'
+                    : 'Once on ${_fmtDate(_startDate)} · '
+                        '${_fmtTime(_startTime)} → ${_fmtTime(_stopTime)}',
                 style: const TextStyle(
-                    color: Color(0xFF2DD4BF), fontSize: 12),
+                    color: _C.accent,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600),
                 textAlign: TextAlign.center,
               ),
             ),
 
             const SizedBox(height: 20),
 
-            // Actions
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => Navigator.pop(context),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF8B949E),
-                      side: const BorderSide(color: Color(0xFF30363D)),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      foregroundColor: _C.textSub,
+                      side: const BorderSide(color: _C.border),
+                      padding:
+                          const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10)),
                     ),
@@ -720,23 +799,28 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
                     onPressed: () {
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Auto-run schedule saved.'),
-                          backgroundColor: Color(0xFF1C2333),
+                        SnackBar(
+                          content: const Text('Auto-run schedule saved.',
+                              style: TextStyle(color: Colors.white)),
+                          backgroundColor: _C.accent,
                           behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
                         ),
                       );
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2DD4BF),
-                      foregroundColor: const Color(0xFF0D1117),
+                      backgroundColor: _C.accent,
+                      foregroundColor: Colors.white,
                       elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      padding:
+                          const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10)),
                     ),
                     child: const Text('Save Schedule',
-                        style: TextStyle(fontWeight: FontWeight.w700)),
+                        style:
+                            TextStyle(fontWeight: FontWeight.w700)),
                   ),
                 ),
               ],
@@ -748,7 +832,7 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
   }
 }
 
-/* ── Dialog helpers ── */
+// ─── Dialog helpers ───────────────────────────────────────────
 
 class _FieldLabel extends StatelessWidget {
   final String text;
@@ -758,23 +842,21 @@ class _FieldLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(text,
         style: const TextStyle(
-            color: Color(0xFF8B949E),
+            color: _C.textSub,
             fontSize: 11,
-            fontWeight: FontWeight.w500));
+            fontWeight: FontWeight.w600));
   }
 }
 
 class _PickerTile extends StatelessWidget {
-  final IconData icon;
-  final Color? iconColor;
-  final String value;
+  final String       value;
   final VoidCallback onTap;
+  final Color?       valueColor;
 
   const _PickerTile({
-    required this.icon,
     required this.value,
     required this.onTap,
-    this.iconColor,
+    this.valueColor,
   });
 
   @override
@@ -782,24 +864,24 @@ class _PickerTile extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
         decoration: BoxDecoration(
-          color: const Color(0xFF0D1117),
+          color: _C.accentBg,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFF30363D)),
+          border: Border.all(color: _C.accentBr),
         ),
         child: Row(
           children: [
-            Icon(icon,
-                size: 15,
-                color: iconColor ?? const Color(0xFF2DD4BF)),
-            const SizedBox(width: 8),
-            Text(value,
-                style: const TextStyle(
-                    color: Color(0xFFE6EDF3), fontSize: 13)),
-            const Spacer(),
-            const Icon(Icons.chevron_right_rounded,
-                color: Color(0xFF484F58), size: 16),
+            Expanded(
+              child: Text(value,
+                  style: TextStyle(
+                      color: valueColor ?? _C.accent,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600)),
+            ),
+            const Text('tap to change',
+                style: TextStyle(color: _C.textMuted, fontSize: 9)),
           ],
         ),
       ),

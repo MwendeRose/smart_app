@@ -1,271 +1,457 @@
+// lib/widgets/sub_meters_grid.dart
 // ignore_for_file: deprecated_member_use
-
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class SubMetersGrid extends StatelessWidget {
+// ─── Colours ─────────────────────────────────────────────────
+class _C {
+  static const Color bg        = Color(0xFFEFF6FF);
+  static const Color surface   = Color(0xFFFFFFFF);
+  static const Color border    = Color(0xFFBFD7F5);
+  static const Color accent    = Color(0xFF2563EB);
+  static const Color accentBg  = Color(0x262563EB);
+  static const Color green     = Color(0xFF16A34A);
+  static const Color greenBg   = Color(0xFFDCFCE7);
+  static const Color greenBdr  = Color(0xFFBBF7D0);
+  static const Color red       = Color(0xFFDC2626);
+  static const Color redBg     = Color(0xFFFEE2E2);
+  static const Color redBdr    = Color(0xFFFECACA);
+  static const Color textPri   = Color(0xFF0F172A);
+  static const Color textSub   = Color(0xFF475569);
+  static const Color textMuted = Color(0xFF94A3B8);
+}
+
+// ─── Model ───────────────────────────────────────────────────
+class SubMeter {
+  final String id;
+  String name;
+  String location;
+  String meterId;
+  double flowRate;
+  int    usage;
+  bool   isActive;
+
+  SubMeter({
+    required this.id,
+    required this.name,
+    required this.location,
+    required this.meterId,
+    required this.flowRate,
+    required this.usage,
+    required this.isActive,
+  });
+
+  factory SubMeter.fromDoc(DocumentSnapshot doc) {
+    final d = doc.data() as Map<String, dynamic>;
+    return SubMeter(
+      id:       doc.id,
+      name:     d['name']     as String? ?? 'Sub Meter',
+      location: d['location'] as String? ?? '',
+      meterId:  d['meterId']  as String? ?? '',
+      flowRate: (d['flowRate'] as num?)?.toDouble() ?? 0.0,
+      usage:    (d['usage']   as num?)?.toInt()     ?? 0,
+      isActive: d['isActive'] as bool?              ?? true,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'name':      name,
+    'location':  location,
+    'meterId':   meterId,
+    'flowRate':  flowRate,
+    'usage':     usage,
+    'isActive':  isActive,
+    'createdAt': FieldValue.serverTimestamp(),
+  };
+}
+
+// ─── Firestore reference ──────────────────────────────────────
+final _col = FirebaseFirestore.instance.collection('submeters');
+
+// ─── Main widget ─────────────────────────────────────────────
+class SubMetersGrid extends StatefulWidget {
   const SubMetersGrid({super.key});
 
-  static const List<Map<String, dynamic>> _units = [
-    {
-      'name': 'Unit A1',
-      'person': 'Mary Wanjiru',
-      'icon': Icons.home_rounded,
-      'iconBg': Color(0xFF1C2333),
-      'flow': 2.3,
-      'today': 286,
-      'month': 8500,
-      'monthCost': 'KES 450.50',
-      'hasAlert': false,
-    },
-    {
-      'name': 'Unit A2',
-      'person': 'Peter Omondi',
-      'icon': Icons.home_rounded,
-      'iconBg': Color(0xFF1C2333),
-      'flow': 0.0,
-      'today': 413,
-      'month': 12000,
-      'monthCost': 'KES 636.00',
-      'hasAlert': true,
-      'alertText': 'Possible leak detected',
-    },
-    {
-      'name': 'Unit B1',
-      'person': 'Grace Muthoni',
-      'icon': Icons.home_rounded,
-      'iconBg': Color(0xFF1C2333),
-      'flow': 1.8,
-      'today': 298,
-      'month': 9200,
-      'monthCost': 'KES 487.60',
-      'hasAlert': false,
-    },
-    {
-      'name': 'Unit B2',
-      'person': 'James Kipchoge',
-      'icon': Icons.home_rounded,
-      'iconBg': Color(0xFF1C2333),
-      'flow': 3.2,
-      'today': 267,
-      'month': 7800,
-      'monthCost': 'KES 413.40',
-      'hasAlert': false,
-    },
-    {
-      'name': 'Shop 1',
-      'person': 'Mama Mboga Store',
-      'icon': Icons.storefront_rounded,
-      'iconBg': Color(0xFF1C2333),
-      'flow': 4.5,
-      'today': 359,
-      'month': 10500,
-      'monthCost': 'KES 556.50',
-      'hasAlert': false,
-    },
-    {
-      'name': 'Shop 2',
-      'person': 'Barber Shop',
-      'icon': Icons.storefront_rounded,
-      'iconBg': Color(0xFF1C2333),
-      'flow': 0.7,
-      'today': 125,
-      'month': 3900,
-      'monthCost': 'KES 206.70',
-      'hasAlert': false,
-    },
-  ];
+  @override
+  State<SubMetersGrid> createState() => _SubMetersGridState();
+}
+
+class _SubMetersGridState extends State<SubMetersGrid> {
+  bool _saving = false;
+
+  // ── Firestore CRUD ───────────────────────────────────────────
+
+  Future<String?> _create(Map<String, dynamic> data) async {
+    try {
+      final ref = await _col.add({
+        'name':      data['name'],
+        'location':  data['location'],
+        'meterId':   data['meterId'],
+        'flowRate':  data['flowRate'],
+        'usage':     data['usage'],
+        'isActive':  data['isActive'],
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      return ref.id;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<void> _update(String id, Map<String, dynamic> data) async {
+    try {
+      await _col.doc(id).update({
+        'name':     data['name'],
+        'location': data['location'],
+        'meterId':  data['meterId'],
+        'flowRate': data['flowRate'],
+        'usage':    data['usage'],
+        'isActive': data['isActive'],
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _delete(String id) async {
+    try {
+      await _col.doc(id).delete();
+    } catch (_) {}
+  }
+
+  // ── Dialogs ──────────────────────────────────────────────────
+
+  void _openAdd() {
+    showDialog<Map<String, dynamic>>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const _SubMeterDialog(title: 'Add Sub Meter'),
+    ).then((data) async {
+      if (data == null || !mounted) return;
+      setState(() => _saving = true);
+      final id = await _create(data);
+      if (!mounted) return;
+      setState(() => _saving = false);
+      _snack(
+        id != null
+            ? '✓ "${data['name']}" added to Firestore.'
+            : '✗ Failed to save. Check your connection.',
+        success: id != null,
+      );
+    });
+  }
+
+  void _openEdit(SubMeter m) {
+    showDialog<Map<String, dynamic>>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _SubMeterDialog(title: 'Edit Sub Meter', initial: m),
+    ).then((data) async {
+      if (data == null || !mounted) return;
+      await _update(m.id, data);
+      if (!mounted) return;
+      _snack('✓ "${data['name']}" updated.');
+    });
+  }
+
+  void _confirmDelete(SubMeter m) {
+    showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: _C.surface,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14)),
+        title: const Text('Delete Sub Meter',
+            style: TextStyle(
+                color: _C.textPri,
+                fontSize: 16,
+                fontWeight: FontWeight.w700)),
+        content: Text('Delete "${m.name}"? This cannot be undone.',
+            style: const TextStyle(color: _C.textSub, fontSize: 13)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel',
+                style: TextStyle(color: _C.textSub)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _C.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    ).then((confirmed) async {
+      if (confirmed != true || !mounted) return;
+      await _delete(m.id);
+      if (!mounted) return;
+      _snack('Meter "${m.name}" deleted.');
+    });
+  }
+
+  void _snack(String msg, {bool success = true}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg,
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.w500)),
+        backgroundColor: success ? _C.green : _C.red,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
+  }
+
+  // ── Build — uses StreamBuilder for real-time updates ─────────
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Sub-Meters Overview',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-                color: Color(0xFFE6EDF3),
-              ),
-            ),
-            GestureDetector(
-              onTap: () {},
-              child: const Text(
-                'View Analytics →',
-                style: TextStyle(
-                  color: Color(0xFF2DD4BF),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
+        // ── Section header ──
+        StreamBuilder<QuerySnapshot>(
+          stream: _col.orderBy('createdAt', descending: false).snapshots(),
+          builder: (ctx, snap) {
+            final count = snap.data?.docs.length ?? 0;
+            return Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                      color: _C.accentBg,
+                      borderRadius: BorderRadius.circular(10)),
+                  child: const Icon(Icons.grid_view_rounded,
+                      color: _C.accent, size: 18),
                 ),
-              ),
-            ),
-          ],
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Sub Meters',
+                          style: TextStyle(
+                              color: _C.textPri,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700)),
+                      Text(
+                        '$count meter${count == 1 ? '' : 's'} connected',
+                        style: const TextStyle(
+                            color: _C.textSub, fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: _saving ? null : _openAdd,
+                  icon: _saving
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2))
+                      : const Icon(Icons.add_rounded, size: 16),
+                  label: Text(_saving ? 'Saving...' : 'Add Meter',
+                      style: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w600)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _C.accent,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
-        const SizedBox(height: 12),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.55,
-          ),
-          itemCount: _units.length,
-          itemBuilder: (context, i) => _UnitCard(unit: _units[i]),
+
+        const SizedBox(height: 14),
+
+        // ── Real-time grid via StreamBuilder ──
+        StreamBuilder<QuerySnapshot>(
+          stream: _col.orderBy('createdAt', descending: false).snapshots(),
+          builder: (ctx, snap) {
+            if (snap.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 40),
+                  child: CircularProgressIndicator(
+                      color: _C.accent, strokeWidth: 2),
+                ),
+              );
+            }
+
+            if (snap.hasError) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Text('Error: ${snap.error}',
+                      style: const TextStyle(color: _C.red)),
+                ),
+              );
+            }
+
+            final docs   = snap.data?.docs ?? [];
+            final meters = docs
+                .map((d) => SubMeter.fromDoc(d))
+                .toList();
+
+            if (meters.isEmpty) return _EmptyState(onAdd: _openAdd);
+
+            return LayoutBuilder(
+              builder: (ctx, constraints) {
+                final cols = constraints.maxWidth > 700 ? 3 : 2;
+                return GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate:
+                      SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount:   cols,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing:  12,
+                    childAspectRatio: 1.5,
+                  ),
+                  itemCount: meters.length,
+                  itemBuilder: (_, i) => _SubMeterTile(
+                    meter:    meters[i],
+                    onEdit:   () => _openEdit(meters[i]),
+                    onDelete: () => _confirmDelete(meters[i]),
+                  ),
+                );
+              },
+            );
+          },
         ),
       ],
     );
   }
 }
 
-/* ── Unit Card ── */
+// ─── Tile ─────────────────────────────────────────────────────
 
-class _UnitCard extends StatelessWidget {
-  final Map<String, dynamic> unit;
-  const _UnitCard({required this.unit});
+class _SubMeterTile extends StatelessWidget {
+  final SubMeter     meter;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const _SubMeterTile({
+    required this.meter,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final bool hasAlert = unit['hasAlert'] as bool;
-    final double flow = unit['flow'] as double;
-    final bool flowing = flow > 0;
-
+    final active = meter.isActive;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF161B22),
+        color: _C.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: hasAlert
-              ? const Color(0xFFF57C00).withOpacity(0.5)
-              : const Color(0xFF30363D),
-        ),
+        border: Border.all(color: active ? _C.border : _C.redBdr),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Header: icon + name + alert icon ──
           Row(
             children: [
               Container(
-                width: 38,
-                height: 38,
+                width: 32, height: 32,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2DD4BF).withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(10),
+                  color: active ? _C.accentBg : _C.redBg,
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(
-                  unit['icon'] as IconData,
-                  color: const Color(0xFF2DD4BF),
-                  size: 20,
-                ),
+                child: Icon(Icons.water_rounded,
+                    color: active ? _C.accent : _C.red, size: 16),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      unit['name'],
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
+                child: Text(meter.name,
+                    style: const TextStyle(
+                        color: _C.textPri,
                         fontSize: 13,
-                        color: Color(0xFFE6EDF3),
-                      ),
-                    ),
-                    Text(
-                      unit['person'],
-                      style: const TextStyle(
-                          fontSize: 11, color: Color(0xFF8B949E)),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                        fontWeight: FontWeight.w700),
+                    overflow: TextOverflow.ellipsis),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(
+                  color: active ? _C.greenBg : _C.redBg,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                      color: active ? _C.greenBdr : _C.redBdr),
+                ),
+                child: Text(
+                  active ? 'Active' : 'Inactive',
+                  style: TextStyle(
+                      color: active ? _C.green : _C.red,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w600),
                 ),
               ),
-              if (hasAlert)
-                const Icon(Icons.warning_amber_rounded,
-                    color: Color(0xFFF57C00), size: 18),
             ],
           ),
 
-          const SizedBox(height: 10),
-          const Divider(color: Color(0xFF30363D), height: 1),
-          const SizedBox(height: 10),
-
-          // ── Stats rows ──
-          _StatRow(
-            label: 'Current Flow',
-            value: '${flow.toStringAsFixed(1)} L/min',
-            valueColor: flowing
-                ? const Color(0xFF2DD4BF)
-                : const Color(0xFF8B949E),
-            icon: Icons.water_drop_rounded,
-          ),
           const SizedBox(height: 6),
-          _StatRow(
-            label: 'Today',
-            value: '${unit['today']} L',
-          ),
-          const SizedBox(height: 6),
-          _StatRow(
-            label: 'This Month',
-            value: '${unit['month']} L',
-            sub: unit['monthCost'],
-          ),
 
-          // ── Alert badge ──
-          if (hasAlert) ...[
-            const SizedBox(height: 8),
-            Container(
-              width: double.infinity,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF57C00).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                    color: const Color(0xFFF57C00).withOpacity(0.4)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.warning_amber_rounded,
-                      color: Color(0xFFF57C00), size: 12),
-                  const SizedBox(width: 5),
-                  Text(
-                    unit['alertText'] ?? '',
-                    style: const TextStyle(
-                      color: Color(0xFFF57C00),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+          Text(meter.location,
+              style: const TextStyle(
+                  color: _C.textSub, fontSize: 10),
+              overflow: TextOverflow.ellipsis),
+          Text('ID: ${meter.meterId}',
+              style: const TextStyle(
+                  color: _C.textMuted, fontSize: 9)),
 
           const Spacer(),
 
-          // ── View Details ──
-          GestureDetector(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => _UnitDetailPage(unit: unit),
+          Row(
+            children: [
+              _Stat(
+                  label: 'Flow',
+                  value: '${meter.flowRate.toStringAsFixed(1)} L/m'),
+              const SizedBox(width: 12),
+              _Stat(label: 'Usage', value: '${meter.usage} L'),
+            ],
+          ),
+
+          const SizedBox(height: 8),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              _ActionBtn(
+                icon: Icons.edit_outlined,
+                color: _C.accent,
+                bg: _C.accentBg,
+                tooltip: 'Edit',
+                onTap: onEdit,
               ),
-            ),
-            child: const Text(
-              'View Details →',
-              style: TextStyle(
-                color: Color(0xFF2DD4BF),
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
+              const SizedBox(width: 6),
+              _ActionBtn(
+                icon: Icons.delete_outline_rounded,
+                color: _C.red,
+                bg: _C.redBg,
+                tooltip: 'Delete',
+                onTap: onDelete,
               ),
-            ),
+            ],
           ),
         ],
       ),
@@ -273,343 +459,107 @@ class _UnitCard extends StatelessWidget {
   }
 }
 
-/* ── Stat Row ── */
-
-class _StatRow extends StatelessWidget {
+class _Stat extends StatelessWidget {
   final String label;
   final String value;
-  final Color? valueColor;
-  final IconData? icon;
-  final String? sub;
-
-  const _StatRow({
-    required this.label,
-    required this.value,
-    this.valueColor,
-    this.icon,
-    this.sub,
-  });
+  const _Stat({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
+            style: const TextStyle(color: _C.textMuted, fontSize: 9)),
+        Text(value,
             style: const TextStyle(
-                fontSize: 11, color: Color(0xFF8B949E))),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Row(
-              children: [
-                if (icon != null) ...[
-                  Icon(icon,
-                      size: 11,
-                      color: valueColor ?? const Color(0xFFE6EDF3)),
-                  const SizedBox(width: 3),
-                ],
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: valueColor ?? const Color(0xFFE6EDF3),
-                  ),
-                ),
-              ],
-            ),
-            if (sub != null)
-              Text(sub!,
-                  style: const TextStyle(
-                      fontSize: 10, color: Color(0xFF484F58))),
-          ],
-        ),
+                color: _C.textPri,
+                fontSize: 12,
+                fontWeight: FontWeight.w700)),
       ],
     );
   }
 }
 
-/* ══════════════════════════════════════════════════════════════
-   Unit Detail Page
-══════════════════════════════════════════════════════════════ */
+class _ActionBtn extends StatelessWidget {
+  final IconData     icon;
+  final Color        color;
+  final Color        bg;
+  final String       tooltip;
+  final VoidCallback onTap;
 
-class _UnitDetailPage extends StatelessWidget {
-  final Map<String, dynamic> unit;
-  const _UnitDetailPage({required this.unit});
+  const _ActionBtn({
+    required this.icon,
+    required this.color,
+    required this.bg,
+    required this.tooltip,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final bool hasAlert = unit['hasAlert'] as bool;
-    final double flow = unit['flow'] as double;
-    final bool flowing = flow > 0;
-
-    return Scaffold(
-      backgroundColor: const Color(0xFF0D1117),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF161B22),
-        foregroundColor: const Color(0xFFE6EDF3),
-        elevation: 0,
-        title: Text(
-          unit['name'],
-          style: const TextStyle(
-              fontSize: 16, fontWeight: FontWeight.w600),
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(height: 1, color: const Color(0xFF30363D)),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Profile Card ──
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF161B22),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFF30363D)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2DD4BF).withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Icon(unit['icon'] as IconData,
-                        color: const Color(0xFF2DD4BF), size: 28),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(unit['name'],
-                            style: const TextStyle(
-                              color: Color(0xFFE6EDF3),
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                            )),
-                        const SizedBox(height: 2),
-                        Text(unit['person'],
-                            style: const TextStyle(
-                                color: Color(0xFF8B949E),
-                                fontSize: 13)),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: flowing
-                          ? const Color(0xFF2DD4BF).withOpacity(0.12)
-                          : const Color(0xFF30363D),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: flowing
-                                ? const Color(0xFF2DD4BF)
-                                : const Color(0xFF8B949E),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 5),
-                        Text(
-                          flowing ? 'Active' : 'Inactive',
-                          style: TextStyle(
-                            color: flowing
-                                ? const Color(0xFF2DD4BF)
-                                : const Color(0xFF8B949E),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            if (hasAlert) ...[
-              const SizedBox(height: 14),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1E1208),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                      color: const Color(0xFFF57C00).withOpacity(0.45)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.warning_amber_rounded,
-                        color: Color(0xFFF57C00), size: 20),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Alert',
-                              style: TextStyle(
-                                color: Color(0xFFF57C00),
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13,
-                              )),
-                          const SizedBox(height: 2),
-                          Text(unit['alertText'] ?? '',
-                              style: const TextStyle(
-                                  color: Color(0xFF8B949E),
-                                  fontSize: 12)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-
-            const SizedBox(height: 20),
-            const _SectionLabel('Live Readings'),
-            const SizedBox(height: 10),
-
-            // ── Live stats grid ──
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 2.2,
-              children: [
-                _DetailStatCard(
-                  label: 'Current Flow',
-                  value: '${flow.toStringAsFixed(1)} L/min',
-                  icon: Icons.water_drop_rounded,
-                  color: flowing
-                      ? const Color(0xFF2DD4BF)
-                      : const Color(0xFF8B949E),
-                ),
-                _DetailStatCard(
-                  label: 'Usage Today',
-                  value: '${unit['today']} L',
-                  icon: Icons.today_rounded,
-                  color: const Color(0xFF2DD4BF),
-                ),
-                _DetailStatCard(
-                  label: 'This Month',
-                  value: '${unit['month']} L',
-                  icon: Icons.calendar_month_rounded,
-                  color: const Color(0xFF2DD4BF),
-                ),
-                _DetailStatCard(
-                  label: 'Monthly Cost',
-                  value: unit['monthCost'],
-                  icon: Icons.payments_rounded,
-                  color: const Color(0xFF2DD4BF),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 24),
-            const _SectionLabel('Consumption History'),
-            const SizedBox(height: 10),
-            const _MiniBarChart(),
-
-            const SizedBox(height: 24),
-            const _SectionLabel('Billing Summary'),
-            const SizedBox(height: 10),
-            _BillingSummary(unit: unit),
-
-            const SizedBox(height: 30),
-          ],
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        child: Container(
+          padding: const EdgeInsets.all(5),
+          decoration: BoxDecoration(
+              color: bg, borderRadius: BorderRadius.circular(6)),
+          child: Icon(icon, color: color, size: 14),
         ),
       ),
     );
   }
 }
 
-/* ── Section Label ── */
+// ─── Empty state ─────────────────────────────────────────────
 
-class _SectionLabel extends StatelessWidget {
-  final String text;
-  const _SectionLabel(this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(text,
-        style: const TextStyle(
-          color: Color(0xFFE6EDF3),
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-        ));
-  }
-}
-
-/* ── Detail Stat Card ── */
-
-class _DetailStatCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color color;
-
-  const _DetailStatCard({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
+class _EmptyState extends StatelessWidget {
+  final VoidCallback onAdd;
+  const _EmptyState({required this.onAdd});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 40),
       decoration: BoxDecoration(
-        color: const Color(0xFF161B22),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF30363D)),
+        color: _C.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _C.border),
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: const EdgeInsets.all(7),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: color, size: 16),
+            padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(
+                color: _C.accentBg, shape: BoxShape.circle),
+            child: const Icon(Icons.water_drop_outlined,
+                color: _C.accent, size: 32),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(value,
-                    style: TextStyle(
-                      color: color,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                    )),
-                Text(label,
-                    style: const TextStyle(
-                        color: Color(0xFF8B949E), fontSize: 10)),
-              ],
+          const SizedBox(height: 12),
+          const Text('No sub meters yet',
+              style: TextStyle(
+                  color: _C.textPri,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          const Text('Add your first sub meter to start monitoring',
+              style: TextStyle(color: _C.textSub, fontSize: 12)),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: onAdd,
+            icon: const Icon(Icons.add_rounded, size: 16),
+            label: const Text('Add Sub Meter'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _C.accent,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
             ),
           ),
         ],
@@ -618,129 +568,292 @@ class _DetailStatCard extends StatelessWidget {
   }
 }
 
-/* ── Mini Bar Chart ── */
+// ─── Add / Edit dialog ────────────────────────────────────────
 
-class _MiniBarChart extends StatelessWidget {
-  const _MiniBarChart();
+class _SubMeterDialog extends StatefulWidget {
+  final String    title;
+  final SubMeter? initial;
+
+  const _SubMeterDialog({required this.title, this.initial});
+
+  @override
+  State<_SubMeterDialog> createState() => _SubMeterDialogState();
+}
+
+class _SubMeterDialogState extends State<_SubMeterDialog> {
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _locationCtrl;
+  late final TextEditingController _meterIdCtrl;
+  late final TextEditingController _flowCtrl;
+  late final TextEditingController _usageCtrl;
+  bool _isActive = true;
+
+  @override
+  void initState() {
+    super.initState();
+    final m       = widget.initial;
+    _nameCtrl     = TextEditingController(text: m?.name     ?? '');
+    _locationCtrl = TextEditingController(text: m?.location ?? '');
+    _meterIdCtrl  = TextEditingController(text: m?.meterId  ?? '');
+    _flowCtrl     = TextEditingController(
+        text: m != null ? m.flowRate.toString() : '');
+    _usageCtrl    = TextEditingController(
+        text: m != null ? m.usage.toString() : '');
+    _isActive     = m?.isActive ?? true;
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _locationCtrl.dispose();
+    _meterIdCtrl.dispose();
+    _flowCtrl.dispose();
+    _usageCtrl.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final name = _nameCtrl.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Meter name is required.'),
+          backgroundColor: _C.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    Navigator.pop(context, {
+      'name':     name,
+      'location': _locationCtrl.text.trim(),
+      'meterId':  _meterIdCtrl.text.trim(),
+      'flowRate': double.tryParse(_flowCtrl.text) ?? 0.0,
+      'usage':    int.tryParse(_usageCtrl.text)   ?? 0,
+      'isActive': _isActive,
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    final values = [220.0, 310.0, 280.0, 350.0, 290.0, 180.0, 240.0];
-    final maxVal = values.reduce((a, b) => a > b ? a : b);
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF161B22),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF30363D)),
-      ),
-      child: SizedBox(
-        height: 100,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: List.generate(days.length, (i) {
-            final ratio = values[i] / maxVal;
-            return Column(
-              mainAxisAlignment: MainAxisAlignment.end,
+    return Dialog(
+      backgroundColor: _C.surface,
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16)),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Text('${values[i].toInt()}',
-                    style: const TextStyle(
-                        color: Color(0xFF484F58), fontSize: 8)),
-                const SizedBox(height: 3),
                 Container(
-                  width: 24,
-                  height: 70 * ratio,
+                  padding: const EdgeInsets.all(7),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.bottomCenter,
-                      end: Alignment.topCenter,
-                      colors: [
-                        const Color(0xFF2DD4BF).withOpacity(0.9),
-                        const Color(0xFF2DD4BF).withOpacity(0.3),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(4),
+                      color: _C.accentBg,
+                      borderRadius: BorderRadius.circular(8)),
+                  child: const Icon(Icons.water_rounded,
+                      color: _C.accent, size: 16),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(widget.title,
+                      style: const TextStyle(
+                          color: _C.textPri,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700)),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded,
+                      color: _C.textSub, size: 20),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Meter is saved to Firestore and appears instantly.',
+              style: TextStyle(color: _C.textMuted, fontSize: 11),
+            ),
+            const SizedBox(height: 14),
+            const Divider(color: _C.border, height: 1),
+            const SizedBox(height: 14),
+
+            _DField(label: 'Meter Name *', ctrl: _nameCtrl,
+                hint: 'e.g. Block A Meter'),
+            const SizedBox(height: 10),
+            _DField(label: 'Location', ctrl: _locationCtrl,
+                hint: 'e.g. Block A, Ground Floor'),
+            const SizedBox(height: 10),
+            _DField(label: 'Meter ID', ctrl: _meterIdCtrl,
+                hint: 'e.g. SM-001'),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: _DField(
+                    label: 'Flow Rate (L/min)',
+                    ctrl: _flowCtrl,
+                    hint: '0.0',
+                    keyboard: const TextInputType.numberWithOptions(
+                        decimal: true),
                   ),
                 ),
-                const SizedBox(height: 5),
-                Text(days[i],
-                    style: const TextStyle(
-                        color: Color(0xFF8B949E), fontSize: 9)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _DField(
+                    label: 'Usage (Litres)',
+                    ctrl: _usageCtrl,
+                    hint: '0',
+                    keyboard: TextInputType.number,
+                  ),
+                ),
               ],
-            );
-          }),
+            ),
+            const SizedBox(height: 12),
+
+            Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: _C.bg,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: _C.border),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.toggle_on_rounded,
+                      color: _C.accent, size: 20),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Meter Active',
+                            style: TextStyle(
+                                color: _C.textPri,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600)),
+                        Text('Toggle off if meter is offline or unused',
+                            style: TextStyle(
+                                color: _C.textMuted, fontSize: 10)),
+                      ],
+                    ),
+                  ),
+                  Switch(
+                    value: _isActive,
+                    onChanged: (v) => setState(() => _isActive = v),
+                    activeColor: _C.accent,
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _C.textSub,
+                      side: const BorderSide(color: _C.border),
+                      padding:
+                          const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _submit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _C.accent,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding:
+                          const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: Text(
+                      widget.initial == null
+                          ? 'Add Meter'
+                          : 'Save Changes',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-/* ── Billing Summary ── */
+// ─── Field helper ─────────────────────────────────────────────
 
-class _BillingSummary extends StatelessWidget {
-  final Map<String, dynamic> unit;
-  const _BillingSummary({required this.unit});
+class _DField extends StatelessWidget {
+  final String                label;
+  final TextEditingController ctrl;
+  final String                hint;
+  final TextInputType         keyboard;
+
+  const _DField({
+    required this.label,
+    required this.ctrl,
+    required this.hint,
+    this.keyboard = TextInputType.text,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final rows = [
-      {'label': 'Water Consumed', 'value': '${unit['month']} L'},
-      {'label': 'Rate per 1000 L', 'value': 'KES 54.00'},
-      {'label': 'Service Charge', 'value': 'KES 50.00'},
-      {'label': 'Total Due', 'value': unit['monthCost'], 'bold': true},
-    ];
-
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF161B22),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF30363D)),
-      ),
-      child: Column(
-        children: rows.asMap().entries.map((e) {
-          final isBold = e.value['bold'] == true;
-          final isLast = e.key == rows.length - 1;
-          return Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(e.value['label']!,
-                        style: TextStyle(
-                          color: isBold
-                              ? const Color(0xFFE6EDF3)
-                              : const Color(0xFF8B949E),
-                          fontSize: 13,
-                          fontWeight: isBold
-                              ? FontWeight.w600
-                              : FontWeight.normal,
-                        )),
-                    Text(e.value['value']!,
-                        style: TextStyle(
-                          color: isBold
-                              ? const Color(0xFF2DD4BF)
-                              : const Color(0xFFE6EDF3),
-                          fontSize: 13,
-                          fontWeight: isBold
-                              ? FontWeight.w700
-                              : FontWeight.normal,
-                        )),
-                  ],
-                ),
-              ),
-              if (!isLast)
-                const Divider(
-                    color: Color(0xFF30363D), height: 1, indent: 16),
-            ],
-          );
-        }).toList(),
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: const TextStyle(
+                color: _C.textSub,
+                fontSize: 11,
+                fontWeight: FontWeight.w500)),
+        const SizedBox(height: 5),
+        TextField(
+          controller: ctrl,
+          keyboardType: keyboard,
+          style: const TextStyle(color: _C.textPri, fontSize: 13),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: const TextStyle(color: _C.textMuted),
+            filled: true,
+            fillColor: _C.bg,
+            contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12, vertical: 10),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: _C.border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: _C.border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide:
+                  const BorderSide(color: _C.accent, width: 1.5),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
