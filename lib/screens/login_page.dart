@@ -337,11 +337,11 @@ class _LoginPageState extends State<LoginPage> {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(10),
                         child: Image.asset(
-                          'assets/logo.jpeg',
+                          'assets/Logo.pdf',
                           fit: BoxFit.contain,
                           // Fallback: drawn Snapp Africa logo (no empty circle)
                           errorBuilder: (_, __, ___) => Container(
-                            color: kBlack,
+                            color: const Color.fromARGB(255, 6, 6, 6),
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 12, vertical: 10),
                             child: Row(

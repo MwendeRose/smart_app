@@ -23,7 +23,8 @@ class _C {
 
 // ─── Model ───────────────────────────────────────────────────
 class SubMeter {
-  final String id;
+  final String    id;
+  final Timestamp? createdAt; // used for client-side sorting
   String name;
   String location;
   String meterId;
@@ -33,6 +34,7 @@ class SubMeter {
 
   SubMeter({
     required this.id,
+    this.createdAt,
     required this.name,
     required this.location,
     required this.meterId,
@@ -44,13 +46,14 @@ class SubMeter {
   factory SubMeter.fromDoc(DocumentSnapshot doc) {
     final d = doc.data() as Map<String, dynamic>;
     return SubMeter(
-      id:       doc.id,
-      name:     d['name']     as String? ?? 'Sub Meter',
-      location: d['location'] as String? ?? '',
-      meterId:  d['meterId']  as String? ?? '',
-      flowRate: (d['flowRate'] as num?)?.toDouble() ?? 0.0,
-      usage:    (d['usage']   as num?)?.toInt()     ?? 0,
-      isActive: d['isActive'] as bool?              ?? true,
+      id:        doc.id,
+      createdAt: d['createdAt'] as Timestamp?,
+      name:      d['name']     as String? ?? 'Sub Meter',
+      location:  d['location'] as String? ?? '',
+      meterId:   d['meterId']  as String? ?? '',
+      flowRate:  (d['flowRate'] as num?)?.toDouble() ?? 0.0,
+      usage:     (d['usage']   as num?)?.toInt()     ?? 0,
+      isActive:  d['isActive'] as bool?              ?? true,
     );
   }
 
@@ -62,6 +65,7 @@ class SubMeter {
     'usage':     usage,
     'isActive':  isActive,
     'createdAt': FieldValue.serverTimestamp(),
+    'deletedAt': null,   // explicit null — required for the isNull filter
   };
 }
 
@@ -79,6 +83,13 @@ class SubMetersGrid extends StatefulWidget {
 class _SubMetersGridState extends State<SubMetersGrid> {
   bool _saving = false;
 
+  // ── Stream — no orderBy, filter only, sort in Dart ──────────
+  // Combining .where(isNull) + .orderBy() requires a composite
+  // Firestore index. Removing orderBy and sorting in Dart avoids
+  // that requirement entirely.
+  Stream<QuerySnapshot> get _activeStream =>
+      _col.where('deletedAt', isNull: true).snapshots();
+
   // ── Firestore CRUD ───────────────────────────────────────────
 
   Future<String?> _create(Map<String, dynamic> data) async {
@@ -91,6 +102,7 @@ class _SubMetersGridState extends State<SubMetersGrid> {
         'usage':     data['usage'],
         'isActive':  data['isActive'],
         'createdAt': FieldValue.serverTimestamp(),
+        'deletedAt': null,   // explicit null so the isNull filter works
       });
       return ref.id;
     } catch (e) {
@@ -111,9 +123,10 @@ class _SubMetersGridState extends State<SubMetersGrid> {
     } catch (_) {}
   }
 
+  // Soft delete — stamps deletedAt so the record stays in Firestore
   Future<void> _delete(String id) async {
     try {
-      await _col.doc(id).delete();
+      await _col.doc(id).update({'deletedAt': FieldValue.serverTimestamp()});
     } catch (_) {}
   }
 
@@ -157,30 +170,40 @@ class _SubMetersGridState extends State<SubMetersGrid> {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: _C.surface,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         title: const Text('Delete Sub Meter',
-            style: TextStyle(
-                color: _C.textPri,
-                fontSize: 16,
-                fontWeight: FontWeight.w700)),
-        content: Text('Delete "${m.name}"? This cannot be undone.',
-            style: const TextStyle(color: _C.textSub, fontSize: 13)),
+            style: TextStyle(color: _C.textPri, fontSize: 16, fontWeight: FontWeight.w700)),
+        content: Column(mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Remove "${m.name}" from this view?',
+              style: const TextStyle(color: _C.textSub, fontSize: 13)),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF8E1), borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFFFE082)),
+            ),
+            child: const Row(children: [
+              Icon(Icons.info_outline, color: Color(0xFFFF8F00), size: 13),
+              SizedBox(width: 6),
+              Expanded(child: Text('Record stays in the database for audit purposes.',
+                  style: TextStyle(color: Color(0xFF6D4C41), fontSize: 11))),
+            ]),
+          ),
+        ]),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel',
-                style: TextStyle(color: _C.textSub)),
+            child: const Text('Cancel', style: TextStyle(color: _C.textSub)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: _C.red,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+              backgroundColor: _C.red, foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
+            child: const Text('Remove'),
           ),
         ],
       ),
@@ -188,7 +211,7 @@ class _SubMetersGridState extends State<SubMetersGrid> {
       if (confirmed != true || !mounted) return;
       await _delete(m.id);
       if (!mounted) return;
-      _snack('Meter "${m.name}" deleted.');
+      _snack('Meter "${m.name}" removed from view.');
     });
   }
 
@@ -196,27 +219,25 @@ class _SubMetersGridState extends State<SubMetersGrid> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg,
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.w500)),
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
         backgroundColor: success ? _C.green : _C.red,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 3),
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
 
-  // ── Build — uses StreamBuilder for real-time updates ─────────
+  // ── Build ─────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Section header ──
+        // ── Section header (live count) ──
         StreamBuilder<QuerySnapshot>(
-          stream: _col.orderBy('createdAt', descending: false).snapshots(),
+          stream: _activeStream,
           builder: (ctx, snap) {
             final count = snap.data?.docs.length ?? 0;
             return Row(
@@ -224,49 +245,30 @@ class _SubMetersGridState extends State<SubMetersGrid> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                      color: _C.accentBg,
-                      borderRadius: BorderRadius.circular(10)),
-                  child: const Icon(Icons.grid_view_rounded,
-                      color: _C.accent, size: 18),
+                      color: _C.accentBg, borderRadius: BorderRadius.circular(10)),
+                  child: const Icon(Icons.grid_view_rounded, color: _C.accent, size: 18),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Sub Meters',
-                          style: TextStyle(
-                              color: _C.textPri,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700)),
-                      Text(
-                        '$count meter${count == 1 ? '' : 's'} connected',
-                        style: const TextStyle(
-                            color: _C.textSub, fontSize: 11),
-                      ),
-                    ],
-                  ),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Text('Sub Meters',
+                        style: TextStyle(color: _C.textPri, fontSize: 16, fontWeight: FontWeight.w700)),
+                    Text('$count meter${count == 1 ? '' : 's'} connected',
+                        style: const TextStyle(color: _C.textSub, fontSize: 11)),
+                  ]),
                 ),
                 ElevatedButton.icon(
                   onPressed: _saving ? null : _openAdd,
                   icon: _saving
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2))
+                      ? const SizedBox(width: 14, height: 14,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                       : const Icon(Icons.add_rounded, size: 16),
                   label: Text(_saving ? 'Saving...' : 'Add Meter',
-                      style: const TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w600)),
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _C.accent,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
+                    backgroundColor: _C.accent, foregroundColor: Colors.white, elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
               ],
@@ -276,20 +278,18 @@ class _SubMetersGridState extends State<SubMetersGrid> {
 
         const SizedBox(height: 14),
 
-        // ── Real-time grid via StreamBuilder ──
+        // ── Real-time grid ──
         StreamBuilder<QuerySnapshot>(
-          stream: _col.orderBy('createdAt', descending: false).snapshots(),
+          stream: _activeStream,
           builder: (ctx, snap) {
             if (snap.connectionState == ConnectionState.waiting) {
               return const Center(
                 child: Padding(
                   padding: EdgeInsets.symmetric(vertical: 40),
-                  child: CircularProgressIndicator(
-                      color: _C.accent, strokeWidth: 2),
+                  child: CircularProgressIndicator(color: _C.accent, strokeWidth: 2),
                 ),
               );
             }
-
             if (snap.hasError) {
               return Center(
                 child: Padding(
@@ -300,10 +300,16 @@ class _SubMetersGridState extends State<SubMetersGrid> {
               );
             }
 
-            final docs   = snap.data?.docs ?? [];
-            final meters = docs
+            // Sort by createdAt in Dart — no composite index needed
+            final meters = (snap.data?.docs ?? [])
                 .map((d) => SubMeter.fromDoc(d))
-                .toList();
+                .toList()
+              ..sort((a, b) {
+                if (a.createdAt == null && b.createdAt == null) return 0;
+                if (a.createdAt == null) return -1;
+                if (b.createdAt == null) return 1;
+                return a.createdAt!.compareTo(b.createdAt!);
+              });
 
             if (meters.isEmpty) return _EmptyState(onAdd: _openAdd);
 
@@ -313,8 +319,7 @@ class _SubMetersGridState extends State<SubMetersGrid> {
                 return GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate:
-                      SliverGridDelegateWithFixedCrossAxisCount(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount:   cols,
                     crossAxisSpacing: 12,
                     mainAxisSpacing:  12,
@@ -343,11 +348,7 @@ class _SubMeterTile extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
-  const _SubMeterTile({
-    required this.meter,
-    required this.onEdit,
-    required this.onDelete,
-  });
+  const _SubMeterTile({required this.meter, required this.onEdit, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -358,160 +359,90 @@ class _SubMeterTile extends StatelessWidget {
         color: _C.surface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: active ? _C.border : _C.redBdr),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.blue.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: Colors.blue.withOpacity(0.05),
+            blurRadius: 8, offset: const Offset(0, 2))],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 32, height: 32,
-                decoration: BoxDecoration(
-                  color: active ? _C.accentBg : _C.redBg,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(Icons.water_rounded,
-                    color: active ? _C.accent : _C.red, size: 16),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(meter.name,
-                    style: const TextStyle(
-                        color: _C.textPri,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700),
-                    overflow: TextOverflow.ellipsis),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 7, vertical: 3),
-                decoration: BoxDecoration(
-                  color: active ? _C.greenBg : _C.redBg,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                      color: active ? _C.greenBdr : _C.redBdr),
-                ),
-                child: Text(
-                  active ? 'Active' : 'Inactive',
-                  style: TextStyle(
-                      color: active ? _C.green : _C.red,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w600),
-                ),
-              ),
-            ],
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(
+            width: 32, height: 32,
+            decoration: BoxDecoration(
+                color: active ? _C.accentBg : _C.redBg,
+                borderRadius: BorderRadius.circular(8)),
+            child: Icon(Icons.water_rounded,
+                color: active ? _C.accent : _C.red, size: 16),
           ),
-
-          const SizedBox(height: 6),
-
-          Text(meter.location,
-              style: const TextStyle(
-                  color: _C.textSub, fontSize: 10),
-              overflow: TextOverflow.ellipsis),
-          Text('ID: ${meter.meterId}',
-              style: const TextStyle(
-                  color: _C.textMuted, fontSize: 9)),
-
-          const Spacer(),
-
-          Row(
-            children: [
-              _Stat(
-                  label: 'Flow',
-                  value: '${meter.flowRate.toStringAsFixed(1)} L/m'),
-              const SizedBox(width: 12),
-              _Stat(label: 'Usage', value: '${meter.usage} L'),
-            ],
+          const SizedBox(width: 8),
+          Expanded(child: Text(meter.name,
+              style: const TextStyle(color: _C.textPri, fontSize: 13, fontWeight: FontWeight.w700),
+              overflow: TextOverflow.ellipsis)),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+            decoration: BoxDecoration(
+              color: active ? _C.greenBg : _C.redBg,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: active ? _C.greenBdr : _C.redBdr),
+            ),
+            child: Text(active ? 'Active' : 'Inactive',
+                style: TextStyle(color: active ? _C.green : _C.red,
+                    fontSize: 9, fontWeight: FontWeight.w600)),
           ),
-
-          const SizedBox(height: 8),
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              _ActionBtn(
-                icon: Icons.edit_outlined,
-                color: _C.accent,
-                bg: _C.accentBg,
-                tooltip: 'Edit',
-                onTap: onEdit,
-              ),
-              const SizedBox(width: 6),
-              _ActionBtn(
-                icon: Icons.delete_outline_rounded,
-                color: _C.red,
-                bg: _C.redBg,
-                tooltip: 'Delete',
-                onTap: onDelete,
-              ),
-            ],
-          ),
-        ],
-      ),
+        ]),
+        const SizedBox(height: 6),
+        Text(meter.location,
+            style: const TextStyle(color: _C.textSub, fontSize: 10),
+            overflow: TextOverflow.ellipsis),
+        Text('ID: ${meter.meterId}',
+            style: const TextStyle(color: _C.textMuted, fontSize: 9)),
+        const Spacer(),
+        Row(children: [
+          _Stat(label: 'Flow', value: '${meter.flowRate.toStringAsFixed(1)} L/m'),
+          const SizedBox(width: 12),
+          _Stat(label: 'Usage', value: '${meter.usage} L'),
+        ]),
+        const SizedBox(height: 8),
+        Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+          _ActionBtn(icon: Icons.edit_outlined, color: _C.accent,
+              bg: _C.accentBg, tooltip: 'Edit', onTap: onEdit),
+          const SizedBox(width: 6),
+          _ActionBtn(icon: Icons.delete_outline_rounded, color: _C.red,
+              bg: _C.redBg, tooltip: 'Delete', onTap: onDelete),
+        ]),
+      ]),
     );
   }
 }
 
 class _Stat extends StatelessWidget {
-  final String label;
-  final String value;
+  final String label, value;
   const _Stat({required this.label, required this.value});
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: const TextStyle(color: _C.textMuted, fontSize: 9)),
-        Text(value,
-            style: const TextStyle(
-                color: _C.textPri,
-                fontSize: 12,
-                fontWeight: FontWeight.w700)),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    Text(label, style: const TextStyle(color: _C.textMuted, fontSize: 9)),
+    Text(value, style: const TextStyle(color: _C.textPri, fontSize: 12, fontWeight: FontWeight.w700)),
+  ]);
 }
 
 class _ActionBtn extends StatelessWidget {
-  final IconData     icon;
-  final Color        color;
-  final Color        bg;
-  final String       tooltip;
-  final VoidCallback onTap;
-
-  const _ActionBtn({
-    required this.icon,
-    required this.color,
-    required this.bg,
-    required this.tooltip,
-    required this.onTap,
-  });
+  final IconData icon; final Color color, bg;
+  final String tooltip; final VoidCallback onTap;
+  const _ActionBtn({required this.icon, required this.color,
+      required this.bg, required this.tooltip, required this.onTap});
 
   @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(6),
-        child: Container(
-          padding: const EdgeInsets.all(5),
-          decoration: BoxDecoration(
-              color: bg, borderRadius: BorderRadius.circular(6)),
-          child: Icon(icon, color: color, size: 14),
-        ),
+  Widget build(BuildContext context) => Tooltip(
+    message: tooltip,
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        padding: const EdgeInsets.all(5),
+        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
+        child: Icon(icon, color: color, size: 14),
       ),
-    );
-  }
+    ),
+  );
 }
 
 // ─── Empty state ─────────────────────────────────────────────
@@ -521,51 +452,33 @@ class _EmptyState extends StatelessWidget {
   const _EmptyState({required this.onAdd});
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 40),
-      decoration: BoxDecoration(
-        color: _C.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _C.border),
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.symmetric(vertical: 40),
+    decoration: BoxDecoration(color: _C.surface,
+        borderRadius: BorderRadius.circular(16), border: Border.all(color: _C.border)),
+    child: Column(mainAxisSize: MainAxisSize.min, children: [
+      Container(padding: const EdgeInsets.all(16),
+          decoration: const BoxDecoration(color: _C.accentBg, shape: BoxShape.circle),
+          child: const Icon(Icons.water_drop_outlined, color: _C.accent, size: 32)),
+      const SizedBox(height: 12),
+      const Text('No sub meters yet',
+          style: TextStyle(color: _C.textPri, fontSize: 15, fontWeight: FontWeight.w700)),
+      const SizedBox(height: 4),
+      const Text('Add your first sub meter to start monitoring',
+          style: TextStyle(color: _C.textSub, fontSize: 12)),
+      const SizedBox(height: 16),
+      ElevatedButton.icon(
+        onPressed: onAdd,
+        icon: const Icon(Icons.add_rounded, size: 16),
+        label: const Text('Add Sub Meter'),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: _C.accent, foregroundColor: Colors.white, elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-                color: _C.accentBg, shape: BoxShape.circle),
-            child: const Icon(Icons.water_drop_outlined,
-                color: _C.accent, size: 32),
-          ),
-          const SizedBox(height: 12),
-          const Text('No sub meters yet',
-              style: TextStyle(
-                  color: _C.textPri,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700)),
-          const SizedBox(height: 4),
-          const Text('Add your first sub meter to start monitoring',
-              style: TextStyle(color: _C.textSub, fontSize: 12)),
-          const SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: onAdd,
-            icon: const Icon(Icons.add_rounded, size: 16),
-            label: const Text('Add Sub Meter'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _C.accent,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+    ]),
+  );
 }
 
 // ─── Add / Edit dialog ────────────────────────────────────────
@@ -573,7 +486,6 @@ class _EmptyState extends StatelessWidget {
 class _SubMeterDialog extends StatefulWidget {
   final String    title;
   final SubMeter? initial;
-
   const _SubMeterDialog({required this.title, this.initial});
 
   @override
@@ -581,11 +493,7 @@ class _SubMeterDialog extends StatefulWidget {
 }
 
 class _SubMeterDialogState extends State<_SubMeterDialog> {
-  late final TextEditingController _nameCtrl;
-  late final TextEditingController _locationCtrl;
-  late final TextEditingController _meterIdCtrl;
-  late final TextEditingController _flowCtrl;
-  late final TextEditingController _usageCtrl;
+  late final TextEditingController _nameCtrl, _locationCtrl, _meterIdCtrl, _flowCtrl, _usageCtrl;
   bool _isActive = true;
 
   @override
@@ -595,33 +503,26 @@ class _SubMeterDialogState extends State<_SubMeterDialog> {
     _nameCtrl     = TextEditingController(text: m?.name     ?? '');
     _locationCtrl = TextEditingController(text: m?.location ?? '');
     _meterIdCtrl  = TextEditingController(text: m?.meterId  ?? '');
-    _flowCtrl     = TextEditingController(
-        text: m != null ? m.flowRate.toString() : '');
-    _usageCtrl    = TextEditingController(
-        text: m != null ? m.usage.toString() : '');
+    _flowCtrl     = TextEditingController(text: m != null ? m.flowRate.toString() : '');
+    _usageCtrl    = TextEditingController(text: m != null ? m.usage.toString()    : '');
     _isActive     = m?.isActive ?? true;
   }
 
   @override
   void dispose() {
-    _nameCtrl.dispose();
-    _locationCtrl.dispose();
-    _meterIdCtrl.dispose();
-    _flowCtrl.dispose();
-    _usageCtrl.dispose();
+    for (final c in [_nameCtrl, _locationCtrl, _meterIdCtrl, _flowCtrl, _usageCtrl]) {
+      c.dispose();
+    }
     super.dispose();
   }
 
   void _submit() {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Meter name is required.'),
-          backgroundColor: _C.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Meter name is required.'),
+        backgroundColor: _C.red, behavior: SnackBarBehavior.floating,
+      ));
       return;
     }
     Navigator.pop(context, {
@@ -638,164 +539,86 @@ class _SubMeterDialogState extends State<_SubMeterDialog> {
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: _C.surface,
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(7),
-                  decoration: BoxDecoration(
-                      color: _C.accentBg,
-                      borderRadius: BorderRadius.circular(8)),
-                  child: const Icon(Icons.water_rounded,
-                      color: _C.accent, size: 16),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(widget.title,
-                      style: const TextStyle(
-                          color: _C.textPri,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700)),
-                ),
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close_rounded,
-                      color: _C.textSub, size: 20),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-              ],
+        child: Column(mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Container(padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(color: _C.accentBg, borderRadius: BorderRadius.circular(8)),
+                child: const Icon(Icons.water_rounded, color: _C.accent, size: 16)),
+            const SizedBox(width: 10),
+            Expanded(child: Text(widget.title,
+                style: const TextStyle(color: _C.textPri, fontSize: 16, fontWeight: FontWeight.w700))),
+            IconButton(
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.close_rounded, color: _C.textSub, size: 20),
+              padding: EdgeInsets.zero, constraints: const BoxConstraints(),
             ),
-            const SizedBox(height: 4),
-            const Text(
-              'Meter is saved to Firestore and appears instantly.',
-              style: TextStyle(color: _C.textMuted, fontSize: 11),
-            ),
-            const SizedBox(height: 14),
-            const Divider(color: _C.border, height: 1),
-            const SizedBox(height: 14),
+          ]),
+          const SizedBox(height: 4),
+          const Text('Meter is saved to Firestore and appears instantly.',
+              style: TextStyle(color: _C.textMuted, fontSize: 11)),
+          const SizedBox(height: 14),
+          const Divider(color: _C.border, height: 1),
+          const SizedBox(height: 14),
 
-            _DField(label: 'Meter Name *', ctrl: _nameCtrl,
-                hint: 'e.g. Block A Meter'),
-            const SizedBox(height: 10),
-            _DField(label: 'Location', ctrl: _locationCtrl,
-                hint: 'e.g. Block A, Ground Floor'),
-            const SizedBox(height: 10),
-            _DField(label: 'Meter ID', ctrl: _meterIdCtrl,
-                hint: 'e.g. SM-001'),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: _DField(
-                    label: 'Flow Rate (L/min)',
-                    ctrl: _flowCtrl,
-                    hint: '0.0',
-                    keyboard: const TextInputType.numberWithOptions(
-                        decimal: true),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _DField(
-                    label: 'Usage (Litres)',
-                    ctrl: _usageCtrl,
-                    hint: '0',
-                    keyboard: TextInputType.number,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
+          _DField(label: 'Meter Name *', ctrl: _nameCtrl,     hint: 'e.g. Block A Meter'),
+          const SizedBox(height: 10),
+          _DField(label: 'Location',     ctrl: _locationCtrl, hint: 'e.g. Block A, Ground Floor'),
+          const SizedBox(height: 10),
+          _DField(label: 'Meter ID',     ctrl: _meterIdCtrl,  hint: 'e.g. SM-001'),
+          const SizedBox(height: 10),
+          Row(children: [
+            Expanded(child: _DField(label: 'Flow Rate (L/min)', ctrl: _flowCtrl,  hint: '0.0',
+                keyboard: const TextInputType.numberWithOptions(decimal: true))),
+            const SizedBox(width: 10),
+            Expanded(child: _DField(label: 'Usage (Litres)',    ctrl: _usageCtrl, hint: '0',
+                keyboard: TextInputType.number)),
+          ]),
+          const SizedBox(height: 12),
 
-            Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: _C.bg,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: _C.border),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.toggle_on_rounded,
-                      color: _C.accent, size: 20),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Meter Active',
-                            style: TextStyle(
-                                color: _C.textPri,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600)),
-                        Text('Toggle off if meter is offline or unused',
-                            style: TextStyle(
-                                color: _C.textMuted, fontSize: 10)),
-                      ],
-                    ),
-                  ),
-                  Switch(
-                    value: _isActive,
-                    onChanged: (v) => setState(() => _isActive = v),
-                    activeColor: _C.accent,
-                  ),
-                ],
-              ),
-            ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(color: _C.bg, borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: _C.border)),
+            child: Row(children: [
+              const Icon(Icons.toggle_on_rounded, color: _C.accent, size: 20),
+              const SizedBox(width: 8),
+              const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Meter Active',
+                    style: TextStyle(color: _C.textPri, fontSize: 13, fontWeight: FontWeight.w600)),
+                Text('Toggle off if meter is offline or unused',
+                    style: TextStyle(color: _C.textMuted, fontSize: 10)),
+              ])),
+              Switch(value: _isActive, onChanged: (v) => setState(() => _isActive = v),
+                  activeColor: _C.accent),
+            ]),
+          ),
+          const SizedBox(height: 20),
 
-            const SizedBox(height: 20),
-
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: _C.textSub,
-                      side: const BorderSide(color: _C.border),
-                      padding:
-                          const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                    ),
-                    child: const Text('Cancel'),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _submit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _C.accent,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      padding:
-                          const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                    ),
-                    child: Text(
-                      widget.initial == null
-                          ? 'Add Meter'
-                          : 'Save Changes',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+          Row(children: [
+            Expanded(child: OutlinedButton(
+              onPressed: () => Navigator.pop(context),
+              style: OutlinedButton.styleFrom(foregroundColor: _C.textSub,
+                  side: const BorderSide(color: _C.border),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+              child: const Text('Cancel'),
+            )),
+            const SizedBox(width: 10),
+            Expanded(child: ElevatedButton(
+              onPressed: _submit,
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: _C.accent, foregroundColor: Colors.white, elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+              child: Text(widget.initial == null ? 'Add Meter' : 'Save Changes',
+                  style: const TextStyle(fontWeight: FontWeight.w700)),
+            )),
+          ]),
+        ]),
       ),
     );
   }
@@ -804,56 +627,29 @@ class _SubMeterDialogState extends State<_SubMeterDialog> {
 // ─── Field helper ─────────────────────────────────────────────
 
 class _DField extends StatelessWidget {
-  final String                label;
-  final TextEditingController ctrl;
-  final String                hint;
-  final TextInputType         keyboard;
-
-  const _DField({
-    required this.label,
-    required this.ctrl,
-    required this.hint,
-    this.keyboard = TextInputType.text,
-  });
+  final String label, hint; final TextEditingController ctrl;
+  final TextInputType keyboard;
+  const _DField({required this.label, required this.ctrl, required this.hint,
+      this.keyboard = TextInputType.text});
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: const TextStyle(
-                color: _C.textSub,
-                fontSize: 11,
-                fontWeight: FontWeight.w500)),
-        const SizedBox(height: 5),
-        TextField(
-          controller: ctrl,
-          keyboardType: keyboard,
-          style: const TextStyle(color: _C.textPri, fontSize: 13),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: const TextStyle(color: _C.textMuted),
-            filled: true,
-            fillColor: _C.bg,
-            contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12, vertical: 10),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: _C.border),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: _C.border),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide:
-                  const BorderSide(color: _C.accent, width: 1.5),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    Text(label, style: const TextStyle(color: _C.textSub, fontSize: 11, fontWeight: FontWeight.w500)),
+    const SizedBox(height: 5),
+    TextField(
+      controller: ctrl, keyboardType: keyboard,
+      style: const TextStyle(color: _C.textPri, fontSize: 13),
+      decoration: InputDecoration(
+        hintText: hint, hintStyle: const TextStyle(color: _C.textMuted),
+        filled: true, fillColor: _C.bg,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: _C.border)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: _C.border)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: _C.accent, width: 1.5)),
+      ),
+    ),
+  ]);
 }

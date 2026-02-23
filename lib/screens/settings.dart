@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import 'system_screens.dart';
 
 // ─────────────────────────────────────────────────────────────
 class SettingsRoute extends StatelessWidget {
@@ -180,7 +181,10 @@ class _SettingsPageState extends State<SettingsPage> {
                   icon: Icons.settings_input_component_outlined,
                   iconColor: const Color(0xFF4CAF50),
                   accentColor: const Color(0xFF4CAF50),
-                  onTap: () => _snack(context, '⚙️ Opening borehole config...', const Color(0xFF4CAF50)),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const BoreholeConfigScreen()),
+                  ),
                 ),
                 _Divider(),
                 _ActionTile(
@@ -189,7 +193,10 @@ class _SettingsPageState extends State<SettingsPage> {
                   icon: Icons.grid_view_outlined,
                   iconColor: const Color(0xFF4CAF50),
                   accentColor: const Color(0xFF4CAF50),
-                  onTap: () => _snack(context, '📊 Opening sub-meter management...', const Color(0xFF4CAF50)),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SubMeterManagementScreen()),
+                  ),
                 ),
                 _Divider(),
                 _ActionTile(
@@ -198,7 +205,10 @@ class _SettingsPageState extends State<SettingsPage> {
                   icon: Icons.tune_outlined,
                   iconColor: const Color(0xFF4CAF50),
                   accentColor: const Color(0xFF4CAF50),
-                  onTap: () => _snack(context, '🎚️ Opening threshold settings...', const Color(0xFF4CAF50)),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AlertThresholdsScreen()),
+                  ),
                 ),
               ]),
 
