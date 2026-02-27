@@ -149,8 +149,9 @@ class _WelcomePageState extends State<WelcomePage> with TickerProviderStateMixin
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // ★ Smart Meter is now the FIRST thing users see
+                _buildMeterHero(),
                 _buildHeader(),
-                _buildMeter(),
                 _buildBenefits(),
                 _buildHowItWorks(),
                 _buildTestimonials(),
@@ -164,7 +165,254 @@ class _WelcomePageState extends State<WelcomePage> with TickerProviderStateMixin
     );
   }
 
-  // ─── HEADER ──────────────────────────────────────────────────
+  // ─── METER HERO (full-bleed, shown FIRST) ───────────────────
+  Widget _buildMeterHero() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF0E3BAA), Color(0xFF1A4FD6), Color(0xFF2060E8)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 36),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+
+              // Logo on dark background
+              SizedBox(
+                width: 180,
+                height: 60,
+                child: Image.asset(
+                  'assets/Logo.png',
+                  fit: BoxFit.contain,
+                  alignment: Alignment.center,
+                  filterQuality: FilterQuality.high,
+                  isAntiAlias: true,
+                  errorBuilder: (_, __, ___) => const _TextLogo(),
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'powered by Snapp Africa',
+                style: TextStyle(
+                  color: Color(0xAABBCCFF),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.4,
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              // "Meet your hardware" label
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                decoration: BoxDecoration(
+                  color: _kAmber.withOpacity(0.18),
+                  border: Border.all(color: _kAmber.withOpacity(0.55)),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  'THE HARDWARE',
+                  style: TextStyle(
+                    color: _kAmber,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.8,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Hero headline
+              const Text(
+                'Meet the Smart Meter',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _kWhite,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  height: 1.18,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'A compact device that attaches to your borehole\nand streams live data straight to your phone.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _kWhite.withOpacity(0.78),
+                  fontSize: 13.5,
+                  height: 1.65,
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              // ── Large, centred meter image ──
+              Center(
+                child: Container(
+                  width: 200,
+                  height: 260,
+                  decoration: BoxDecoration(
+                    color: _kWhite,
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: _kWhite.withOpacity(0.3), width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.30),
+                        blurRadius: 40,
+                        offset: const Offset(0, 16),
+                      ),
+                      BoxShadow(
+                        color: _kAmber.withOpacity(0.15),
+                        blurRadius: 60,
+                        spreadRadius: 4,
+                        offset: const Offset(0, 0),
+                      ),
+                    ],
+                  ),
+                  child: Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: Image.asset(
+                          'assets/meter.png',
+                          width: 200,
+                          height: 260,
+                          fit: BoxFit.contain,
+                          alignment: Alignment.center,
+                          filterQuality: FilterQuality.high,
+                          errorBuilder: (_, __, ___) => const _MeterPlaceholderLarge(),
+                        ),
+                      ),
+                      // LIVE badge
+                      Positioned(
+                        top: 12, right: 12,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: _kGreen,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(color: _kGreen.withOpacity(0.4),
+                                  blurRadius: 8, offset: const Offset(0, 2)),
+                            ],
+                          ),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            Container(
+                              width: 6, height: 6,
+                              decoration: const BoxDecoration(
+                                  color: _kWhite, shape: BoxShape.circle),
+                            ),
+                            const SizedBox(width: 5),
+                            const Text('LIVE',
+                                style: TextStyle(color: _kWhite, fontSize: 9,
+                                    fontWeight: FontWeight.w900, letterSpacing: 0.8)),
+                          ]),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 28),
+
+              // Feature chips row
+              Wrap(
+                spacing: 10, runSpacing: 10,
+                alignment: WrapAlignment.center,
+                children: [
+                  _MeterChip(icon: Icons.wifi_rounded, label: 'Wireless'),
+                  _MeterChip(icon: Icons.bolt_rounded, label: 'Low Power'),
+                  _MeterChip(icon: Icons.water_drop_rounded, label: 'IP67 Rated'),
+                  _MeterChip(icon: Icons.build_circle_rounded, label: 'Easy Install'),
+                ],
+              ),
+              const SizedBox(height: 30),
+
+              // Product badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: _kAmberBg,
+                  border: Border.all(color: _kAmber.withOpacity(0.5)),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Text(
+                  'SNAPP SMART METER  ·  BOREHOLE EDITION',
+                  style: TextStyle(
+                    color: Color(0xFF774400),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 28),
+
+              // CTA to scroll / continue
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _goToLogin,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _kAmber,
+                    foregroundColor: const Color(0xFF3D2000),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    'Get Started — It\'s Free',
+                    style: TextStyle(
+                      color: Color(0xFF3D2000),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: _goToLogin,
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFFAAC0FF), width: 1.5),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: const Text(
+                    'Sign In to Your Account',
+                    style: TextStyle(
+                        color: _kWhite, fontSize: 14, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+
+              // Scroll hint
+              const SizedBox(height: 24),
+              Column(children: [
+                Text('Scroll to learn more',
+                    style: TextStyle(
+                        color: _kWhite.withOpacity(0.5), fontSize: 11,
+                        fontWeight: FontWeight.w500)),
+                const SizedBox(height: 6),
+                Icon(Icons.keyboard_arrow_down_rounded,
+                    color: _kWhite.withOpacity(0.4), size: 22),
+              ]),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─── HEADER (now second section) ─────────────────────────────
   Widget _buildHeader() {
     return Container(
       decoration: const BoxDecoration(
@@ -174,315 +422,100 @@ class _WelcomePageState extends State<WelcomePage> with TickerProviderStateMixin
           end: Alignment.bottomCenter,
         ),
       ),
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 28, 24, 44),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 44, 24, 44),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
 
-              // Logo
-              SizedBox(
-                width: 200,
-                height: 72,
-                child: Image.asset(
-                  'assets/Logo.png',
-                  fit: BoxFit.contain,
-                  alignment: Alignment.center,
-                  filterQuality: FilterQuality.high,
-                  isAntiAlias: true,
-                  errorBuilder: (_, __, ___) => const _TextLogoLight(),
-                ),
+            // Blue badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+              decoration: BoxDecoration(
+                color: _kBlueSoft,
+                border: Border.all(color: const Color(0xFF99B8FF)),
+                borderRadius: BorderRadius.circular(20),
               ),
-              const SizedBox(height: 4),
-
-              const Text(
-                'powered by Snapp Africa',
+              child: const Text(
+                'Smart Borehole Monitoring',
                 style: TextStyle(
-                  color: _kSubtext,
+                  color: _kBlue,
                   fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.4,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.5,
                 ),
               ),
-              const SizedBox(height: 32),
+            ),
+            const SizedBox(height: 16),
 
-              // Blue badge
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-                decoration: BoxDecoration(
-                  color: _kBlueSoft,
-                  border: Border.all(color: Color(0xFF99B8FF)),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  'Smart Borehole Monitoring',
-                  style: TextStyle(
-                    color: _kBlue,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.5,
+            // Hero headline
+            const Text(
+              'Never Worry About\nYour Water Supply Again',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: _kText,
+                fontSize: 30,
+                fontWeight: FontWeight.w900,
+                height: 1.18,
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            const Text(
+              'Monitor your borehole, control your pump, and get\nwarned about problems — all from your phone.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: _kSubtext,
+                fontSize: 14,
+                height: 1.65,
+              ),
+            ),
+            const SizedBox(height: 32),
+
+            // Stats card
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
+              decoration: BoxDecoration(
+                color: _kWhite,
+                border: Border.all(color: _kBorder),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: _kBlue.withOpacity(0.07),
+                    blurRadius: 20,
+                    offset: const Offset(0, 6),
                   ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Hero headline
-              const Text(
-                'Never Worry About\nYour Water Supply Again',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: _kText,
-                  fontSize: 30,
-                  fontWeight: FontWeight.w900,
-                  height: 1.18,
-                  letterSpacing: -0.5,
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              const Text(
-                'Monitor your borehole, control your pump, and get\nwarned about problems — all from your phone.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: _kSubtext,
-                  fontSize: 14,
-                  height: 1.65,
-                ),
-              ),
-              const SizedBox(height: 32),
-
-              // Stats card
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
-                decoration: BoxDecoration(
-                  color: _kWhite,
-                  border: Border.all(color: _kBorder),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _kBlue.withOpacity(0.07),
-                      blurRadius: 20,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _Stat('30s',  'Updates'),
-                    _StatDiv(),
-                    _Stat('<2s',  'Pump resp.'),
-                    _StatDiv(),
-                    _Stat('<1s',  'Alerts'),
-                    _StatDiv(),
-                    _Stat('24/7', 'Monitoring'),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 28),
-
-              // Primary CTA
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _goToLogin,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _kBlue,
-                    foregroundColor: _kWhite,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    elevation: 0,
-                  ),
-                  child: const Text(
-                    'Get Started — It\'s Free',
-                    style: TextStyle(color: _kWhite, fontSize: 16, fontWeight: FontWeight.w800),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-
-              // Secondary CTA
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: _goToLogin,
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: _kBorder, width: 1.5),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    backgroundColor: _kWhite,
-                  ),
-                  child: const Text(
-                    'Sign In to Your Account',
-                    style: TextStyle(color: _kTextMid, fontSize: 14, fontWeight: FontWeight.w700),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Trust badges
-              Wrap(
-                spacing: 14, runSpacing: 8,
-                alignment: WrapAlignment.center,
-                children: [
-                  _Trust('No contracts'),
-                  _Trust('Any phone'),
-                  _Trust('Easy install'),
-                  _Trust('Free to start'),
                 ],
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ─── METER SHOWCASE ──────────────────────────────────────────
-  Widget _buildMeter() {
-    return Container(
-      color: _kWhite,
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-      child: Column(
-        children: [
-          _SectionPill('THE HARDWARE'),
-          const SizedBox(height: 16),
-          const Text(
-            'Meet Your Smart Meter',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: _kText, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -0.3),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'A compact device that attaches to your borehole and\nstreams live data straight to your phone.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: _kSubtext, fontSize: 13.5, height: 1.6),
-          ),
-          const SizedBox(height: 28),
-
-          // Meter card layout — image left, info right
-          Container(
-            decoration: BoxDecoration(
-              color: _kBg,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: _kBorder, width: 1.5),
-              boxShadow: [
-                BoxShadow(
-                  color: _kBlue.withOpacity(0.07),
-                  blurRadius: 20,
-                  offset: const Offset(0, 6),
-                ),
-              ],
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _Stat('30s',  'Updates'),
+                  _StatDiv(),
+                  _Stat('<2s',  'Pump resp.'),
+                  _StatDiv(),
+                  _Stat('<1s',  'Alerts'),
+                  _StatDiv(),
+                  _Stat('24/7', 'Monitoring'),
+                ],
+              ),
             ),
-            padding: const EdgeInsets.all(18),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(height: 28),
+
+            // Trust badges
+            Wrap(
+              spacing: 14, runSpacing: 8,
+              alignment: WrapAlignment.center,
               children: [
-
-                // ── Small meter image — fully visible (BoxFit.contain) ──
-                Container(
-                  width: 140,
-                  height: 185,
-                  decoration: BoxDecoration(
-                    color: _kWhite,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: _kBorder, width: 1.5),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: Stack(
-                    children: [
-                      // Fully contained — no cropping
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(13),
-                        child: Image.asset(
-                          'assets/meter.png',
-                          width: 140,
-                          height: 185,
-                          fit: BoxFit.contain,        // ← shows entire image
-                          alignment: Alignment.center,
-                          filterQuality: FilterQuality.high,
-                          errorBuilder: (_, __, ___) => const _MeterPlaceholder(),
-                        ),
-                      ),
-                      // LIVE badge overlay
-                      Positioned(
-                        top: 8, right: 8,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: _kGreen,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(mainAxisSize: MainAxisSize.min, children: [
-                            Container(
-                              width: 5, height: 5,
-                              decoration: const BoxDecoration(color: _kWhite, shape: BoxShape.circle),
-                            ),
-                            const SizedBox(width: 4),
-                            const Text('LIVE', style: TextStyle(color: _kWhite, fontSize: 8,
-                                fontWeight: FontWeight.w900, letterSpacing: 0.8)),
-                          ]),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 18),
-
-                // Info beside the meter
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: _kAmberBg,
-                          border: Border.all(color: _kAmber.withOpacity(0.4)),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Text(
-                          'SNAPP SMART METER',
-                          style: TextStyle(color: Color(0xFF774400), fontSize: 9,
-                              fontWeight: FontWeight.w900, letterSpacing: 0.8),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Borehole Edition',
-                        style: TextStyle(color: _kText, fontSize: 15, fontWeight: FontWeight.w900),
-                      ),
-                      const SizedBox(height: 12),
-                      ...[
-                        [Icons.wifi_rounded,        'Wireless'],
-                        [Icons.bolt_rounded,         'Low Power'],
-                        [Icons.water_drop_rounded,   'IP67 Rated'],
-                        [Icons.build_circle_rounded, 'Easy Install'],
-                      ].map((item) => Padding(
-                        padding: const EdgeInsets.only(bottom: 7),
-                        child: Row(children: [
-                          Icon(item[0] as IconData, size: 14, color: _kBlue),
-                          const SizedBox(width: 7),
-                          Text(item[1] as String,
-                              style: const TextStyle(color: _kTextMid, fontSize: 12.5,
-                                  fontWeight: FontWeight.w600)),
-                        ]),
-                      )),
-                    ],
-                  ),
-                ),
+                _Trust('No contracts'),
+                _Trust('Any phone'),
+                _Trust('Easy install'),
+                _Trust('Free to start'),
               ],
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -803,6 +836,27 @@ class _WelcomePageState extends State<WelcomePage> with TickerProviderStateMixin
 // HELPER WIDGETS
 // ════════════════════════════════════════════════════════════════
 
+class _MeterChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _MeterChip({required this.icon, required this.label});
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+    decoration: BoxDecoration(
+      color: _kWhite.withOpacity(0.12),
+      border: Border.all(color: _kWhite.withOpacity(0.25)),
+      borderRadius: BorderRadius.circular(30),
+    ),
+    child: Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(icon, size: 13, color: _kAmber),
+      const SizedBox(width: 6),
+      Text(label, style: const TextStyle(color: _kWhite, fontSize: 12,
+          fontWeight: FontWeight.w700)),
+    ]),
+  );
+}
+
 class _SectionPill extends StatelessWidget {
   final String text;
   const _SectionPill(this.text);
@@ -855,19 +909,19 @@ class _TextLogo extends StatelessWidget {
   }
 }
 
-class _MeterPlaceholder extends StatelessWidget {
-  const _MeterPlaceholder();
+class _MeterPlaceholderLarge extends StatelessWidget {
+  const _MeterPlaceholderLarge();
   @override
   Widget build(BuildContext context) {
     return Container(
       color: _kBlueSoft,
       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        const Icon(Icons.sensors_rounded, size: 38, color: _kBlue),
-        const SizedBox(height: 8),
-        const Text('Smart Meter', style: TextStyle(color: _kText, fontSize: 12, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 4),
+        const Icon(Icons.sensors_rounded, size: 56, color: _kBlue),
+        const SizedBox(height: 10),
+        const Text('Smart Meter', style: TextStyle(color: _kText, fontSize: 14, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 5),
         const Text('Add meter.png\nto assets/', textAlign: TextAlign.center,
-            style: TextStyle(color: _kSubtext, fontSize: 10, height: 1.4)),
+            style: TextStyle(color: _kSubtext, fontSize: 11, height: 1.4)),
       ]),
     );
   }

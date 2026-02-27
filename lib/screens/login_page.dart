@@ -3,7 +3,7 @@
 
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
-import 'dashboard_page.dart';   // ← import dashboard
+import 'dashboard_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -50,6 +50,9 @@ class _LoginPageState extends State<LoginPage> {
   static const kBlack     = Color(0xFF0D0D0D);
   static const kTeal      = Color(0xFF0891B2);
 
+  // Breakpoint: below this width, stack vertically
+  static const _kBreakpoint = 600.0;
+
   @override
   void dispose() {
     _loginEmail.dispose(); _loginPassword.dispose();
@@ -59,7 +62,7 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  // ── Navigation helper — replaces the entire stack ─────────
+  // ── Navigation ────────────────────────────────────────────
   void _goToDashboard() {
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
@@ -69,8 +72,14 @@ class _LoginPageState extends State<LoginPage> {
         transitionsBuilder: (_, anim, __, child) =>
             FadeTransition(opacity: anim, child: child),
       ),
-      (route) => false,   // remove all previous routes (welcome + login)
+      (route) => false,
     );
+  }
+
+  void _goBack() {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
   }
 
   // ── Auth actions ──────────────────────────────────────────
@@ -87,7 +96,7 @@ class _LoginPageState extends State<LoginPage> {
     if (err != null && mounted) {
       setState(() => _error = err);
     } else {
-      _goToDashboard();          // ← redirect on success
+      _goToDashboard();
     }
   }
 
@@ -118,7 +127,7 @@ class _LoginPageState extends State<LoginPage> {
     if (err != null && mounted) {
       setState(() => _error = err);
     } else {
-      _goToDashboard();          // ← redirect on success
+      _goToDashboard();
     }
   }
 
@@ -127,7 +136,7 @@ class _LoginPageState extends State<LoginPage> {
     final err = await _auth.signInWithGoogle();
     if (mounted) {
       setState(() { _googleLoading = false; _error = err; });
-      if (err == null) _goToDashboard();  // ← redirect on success
+      if (err == null) _goToDashboard();
     }
   }
 
@@ -239,15 +248,26 @@ class _LoginPageState extends State<LoginPage> {
           ),
         ),
         child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 36),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 760),
-                child: _buildCard(),
-              ),
-            ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isSmall = constraints.maxWidth < _kBreakpoint;
+              return isSmall ? _buildSmallLayout() : _buildLargeLayout();
+            },
           ),
+        ),
+      ),
+    );
+  }
+
+  // ── Large screen: side-by-side card ──────────────────────
+
+  Widget _buildLargeLayout() {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 36),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 760),
+          child: _buildCard(),
         ),
       ),
     );
@@ -277,8 +297,8 @@ class _LoginPageState extends State<LoginPage> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SizedBox(width: 280, child: _buildHeroPanel()),
-              Expanded(child: _buildFormPanel()),
+              SizedBox(width: 280, child: _buildHeroPanel(compact: false)),
+              Expanded(child: _buildFormPanel(showBackButton: true)),
             ],
           ),
         ),
@@ -286,10 +306,28 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  // ── LEFT: Blue hero panel ─────────────────────────────────
+  // ── Small screen: stacked layout ─────────────────────────
 
-  Widget _buildHeroPanel() {
+  Widget _buildSmallLayout() {
+    return Column(
+      children: [
+        // Compact hero banner on top
+        _buildHeroPanel(compact: true),
+        // Scrollable form below
+        Expanded(
+          child: SingleChildScrollView(
+            child: _buildFormPanel(showBackButton: false),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Hero panel (left on large / top on small) ─────────────
+
+  Widget _buildHeroPanel({required bool compact}) {
     return Container(
+      height: compact ? null : null,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -304,115 +342,118 @@ class _LoginPageState extends State<LoginPage> {
       ),
       child: Stack(
         children: [
-          Positioned(top: -50, right: -50,
-            child: Container(width: 200, height: 200,
-              decoration: BoxDecoration(shape: BoxShape.circle,
-                  color: kWhite.withOpacity(0.07)))),
-          Positioned(bottom: -60, left: -40,
-            child: Container(width: 220, height: 220,
-              decoration: BoxDecoration(shape: BoxShape.circle,
-                  color: kWhite.withOpacity(0.05)))),
-          Positioned(top: 120, right: 10,
-            child: Container(width: 80, height: 80,
-              decoration: BoxDecoration(shape: BoxShape.circle,
-                  color: kAmber.withOpacity(0.12)))),
+          // Decorative circles — only show on large
+          if (!compact) ...[
+            Positioned(top: -50, right: -50,
+              child: Container(width: 200, height: 200,
+                decoration: BoxDecoration(shape: BoxShape.circle,
+                    color: kWhite.withOpacity(0.07)))),
+            Positioned(bottom: -60, left: -40,
+              child: Container(width: 220, height: 220,
+                decoration: BoxDecoration(shape: BoxShape.circle,
+                    color: kWhite.withOpacity(0.05)))),
+            Positioned(top: 120, right: 10,
+              child: Container(width: 80, height: 80,
+                decoration: BoxDecoration(shape: BoxShape.circle,
+                    color: kAmber.withOpacity(0.12)))),
+          ],
 
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 30, 24, 32),
+          compact ? _buildCompactHeroContent() : _buildFullHeroContent(),
+        ],
+      ),
+    );
+  }
+
+  /// Full hero content for wide screens (vertical layout with tagline)
+  Widget _buildFullHeroContent() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 30, 24, 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _buildLogoBlock(),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _mode == 0 ? 'Welcome\nback.' : 'Create your\nAccount',
+                style: const TextStyle(color: kWhite, fontSize: 30,
+                    fontWeight: FontWeight.w900, height: 1.15, letterSpacing: -0.3),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _mode == 0
+                    ? 'Monitor boreholes in\nreal-time across Africa.'
+                    : 'Monitor boreholes and\nmanage water smartly.',
+                style: TextStyle(color: kWhite.withOpacity(0.7), fontSize: 13, height: 1.6),
+              ),
+              const SizedBox(height: 30),
+              _buildPoweredByBadge(),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Compact hero content for small screens (horizontal, single-row)
+  Widget _buildCompactHeroContent() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      child: Row(
+        children: [
+          // Back button
+          GestureDetector(
+            onTap: _goBack,
+            child: Container(
+              width: 36, height: 36,
+              decoration: BoxDecoration(
+                color: kWhite.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: kWhite.withOpacity(0.25)),
+              ),
+              child: const Icon(Icons.arrow_back_ios_new_rounded,
+                  color: kWhite, size: 16),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Logo small
+          Container(
+            width: 44, height: 44,
+            decoration: BoxDecoration(
+              color: kWhite,
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(0.18),
+                    blurRadius: 10, offset: const Offset(0, 3)),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Padding(
+                padding: const EdgeInsets.all(5),
+                child: Image.asset('assets/Logo.png',
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => const _LogoFallback()),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Title + subtitle
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisSize: MainAxisSize.min,
               children: [
-
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 160,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        color: kWhite,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.18),
-                              blurRadius: 16, offset: const Offset(0, 5)),
-                          BoxShadow(color: kAmber.withOpacity(0.15),
-                              blurRadius: 20, spreadRadius: 2),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Image.asset(
-                            'assets/Logo.png',
-                            fit: BoxFit.contain,
-                            filterQuality: FilterQuality.high,
-                            isAntiAlias: true,
-                            errorBuilder: (_, __, ___) => _LogoFallback(),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    const Text('Smart Meter App',
-                        style: TextStyle(color: kWhite, fontSize: 13,
-                            fontWeight: FontWeight.w800, letterSpacing: 0.2)),
-                    const SizedBox(height: 2),
-                    Row(children: [
-                      Text('powered by ', style: TextStyle(color: kWhite.withOpacity(0.5), fontSize: 9)),
-                      Text('Snapp Africa', style: TextStyle(color: kAmber.withOpacity(0.85),
-                          fontSize: 9, fontWeight: FontWeight.w700)),
-                    ]),
-                  ],
+                Text(
+                  _mode == 0 ? 'Welcome back.' : 'Create Account',
+                  style: const TextStyle(color: kWhite, fontSize: 17,
+                      fontWeight: FontWeight.w900, height: 1.2),
                 ),
-
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _mode == 0 ? 'Welcome\nback.' : 'Create your\nAccount',
-                      style: const TextStyle(color: kWhite, fontSize: 30,
-                          fontWeight: FontWeight.w900, height: 1.15, letterSpacing: -0.3),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      _mode == 0
-                          ? 'Monitor boreholes in\nreal-time across Africa.'
-                          : 'Monitor boreholes and\nmanage water smartly.',
-                      style: TextStyle(color: kWhite.withOpacity(0.7), fontSize: 13, height: 1.6),
-                    ),
-                    const SizedBox(height: 30),
-
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                      decoration: BoxDecoration(
-                        color: kWhite.withOpacity(0.10),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: kAmber.withOpacity(0.35), width: 1),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text('>', style: TextStyle(color: kAmber, fontSize: 16,
-                              fontWeight: FontWeight.w900, fontStyle: FontStyle.italic, height: 1)),
-                          const SizedBox(width: 8),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Powered by Snapp Africa',
-                                  style: TextStyle(color: kWhite.withOpacity(0.92),
-                                      fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.2)),
-                              Text('The last mile provider for mobile & web',
-                                  style: TextStyle(color: kWhite.withOpacity(0.5),
-                                      fontSize: 7.5, fontStyle: FontStyle.italic, letterSpacing: 0.1)),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+                const SizedBox(height: 2),
+                Text('Smart Meter App · Snapp Africa',
+                    style: TextStyle(color: kWhite.withOpacity(0.6), fontSize: 11)),
               ],
             ),
           ),
@@ -421,25 +462,134 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  // ── RIGHT: White form panel ───────────────────────────────
-
-  Widget _buildFormPanel() {
-    return Container(
-      color: kWhite,
-      padding: const EdgeInsets.fromLTRB(36, 36, 36, 36),
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 260),
-        transitionBuilder: (child, anim) => FadeTransition(
-          opacity: anim,
-          child: SlideTransition(
-            position: Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero)
-                .animate(CurvedAnimation(parent: anim, curve: Curves.easeOut)),
-            child: child,
+  Widget _buildLogoBlock() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 160, height: 72,
+          decoration: BoxDecoration(
+            color: kWhite,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.18),
+                  blurRadius: 16, offset: const Offset(0, 5)),
+              BoxShadow(color: kAmber.withOpacity(0.15),
+                  blurRadius: 20, spreadRadius: 2),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Image.asset('assets/Logo.png',
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.high,
+                  isAntiAlias: true,
+                  errorBuilder: (_, __, ___) => const _LogoFallback()),
+            ),
           ),
         ),
-        child: _mode == 0
-            ? _signInForm(key: const ValueKey('signin'))
-            : _signUpForm(key: const ValueKey('signup')),
+        const SizedBox(height: 10),
+        const Text('Smart Meter App',
+            style: TextStyle(color: kWhite, fontSize: 13,
+                fontWeight: FontWeight.w800, letterSpacing: 0.2)),
+        const SizedBox(height: 2),
+        Row(children: [
+          Text('powered by ', style: TextStyle(color: kWhite.withOpacity(0.5), fontSize: 9)),
+          Text('Snapp Africa', style: TextStyle(color: kAmber.withOpacity(0.85),
+              fontSize: 9, fontWeight: FontWeight.w700)),
+        ]),
+      ],
+    );
+  }
+
+  Widget _buildPoweredByBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: BoxDecoration(
+        color: kWhite.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: kAmber.withOpacity(0.35), width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('>', style: TextStyle(color: kAmber, fontSize: 16,
+              fontWeight: FontWeight.w900, fontStyle: FontStyle.italic, height: 1)),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Powered by Snapp Africa',
+                  style: TextStyle(color: kWhite.withOpacity(0.92),
+                      fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.2)),
+              Text('The last mile provider for mobile & web',
+                  style: TextStyle(color: kWhite.withOpacity(0.5),
+                      fontSize: 7.5, fontStyle: FontStyle.italic, letterSpacing: 0.1)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Form panel ────────────────────────────────────────────
+
+  Widget _buildFormPanel({required bool showBackButton}) {
+    return Container(
+      color: kWhite,
+      padding: const EdgeInsets.fromLTRB(24, 28, 24, 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Back button row — only shown on large screens
+          if (showBackButton) ...[
+            Row(
+              children: [
+                GestureDetector(
+                  onTap: _goBack,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: kFieldBg,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: kBorder),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(Icons.arrow_back_ios_new_rounded, size: 13, color: kSubtext),
+                        SizedBox(width: 5),
+                        Text('Back', style: TextStyle(color: kSubtext, fontSize: 12,
+                            fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+          ],
+
+          // Animated form switcher
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 260),
+            transitionBuilder: (child, anim) => FadeTransition(
+              opacity: anim,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                    begin: const Offset(0, 0.04), end: Offset.zero)
+                    .animate(CurvedAnimation(parent: anim, curve: Curves.easeOut)),
+                child: child,
+              ),
+            ),
+            child: _mode == 0
+                ? _signInForm(key: const ValueKey('signin'))
+                : _signUpForm(key: const ValueKey('signup')),
+          ),
+        ],
       ),
     );
   }
@@ -642,6 +792,8 @@ class _LoginPageState extends State<LoginPage> {
 // LOGO FALLBACK
 // ════════════════════════════════════════════════════════════
 class _LogoFallback extends StatelessWidget {
+  const _LogoFallback();
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -820,7 +972,8 @@ class _ErrBox extends StatelessWidget {
       child: Row(children: [
         const Icon(Icons.error_outline, color: _LoginPageState.kError, size: 15),
         const SizedBox(width: 8),
-        Expanded(child: Text(message, style: const TextStyle(color: _LoginPageState.kError, fontSize: 12))),
+        Expanded(child: Text(message,
+            style: const TextStyle(color: _LoginPageState.kError, fontSize: 12))),
         if (onClose != null)
           GestureDetector(onTap: onClose,
               child: const Icon(Icons.close, color: _LoginPageState.kError, size: 15)),

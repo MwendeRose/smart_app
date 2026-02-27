@@ -37,12 +37,6 @@ class _DashboardPageState extends State<DashboardPage> {
     super.dispose();
   }
 
-  // 0 = Dashboard overview
-  // 1 = Home
-  // 2 = Alerts
-  // 3 = Analytics
-  // 4 = Settings
-  // 5 = Profile
   Widget _body() {
     switch (_sideIndex) {
       case 1:
@@ -73,21 +67,15 @@ class _DashboardPageState extends State<DashboardPage> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ── Sidebar ─────────────────────────────────────────
             _DashSidebar(
               selected: _sideIndex,
               onSelect: (i) => setState(() => _sideIndex = i),
             ),
-
-            // ── Main content ────────────────────────────────────
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // ① Persistent title bar — always visible
                   const _TitleBar(),
-
-                  // ② Page body
                   Expanded(
                     child: Stack(
                       children: [
@@ -106,8 +94,6 @@ class _DashboardPageState extends State<DashboardPage> {
                       ],
                     ),
                   ),
-
-                  // ③ Persistent footer — always visible
                   const _AppFooter(),
                 ],
               ),
@@ -220,8 +206,6 @@ class _DashSidebar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-
-          // ── Logo — white card so logo colours always pop ──────
           Container(
             color: Colors.white,
             padding: const EdgeInsets.fromLTRB(10, 16, 10, 14),
@@ -232,8 +216,7 @@ class _DashSidebar extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(14),
-                  border:
-                      Border.all(color: const Color(0xFFBFD7F5), width: 1.5),
+                  border: Border.all(color: const Color(0xFFBFD7F5), width: 1.5),
                   boxShadow: const [
                     BoxShadow(
                       color: Color(0x1A1D4ED8),
@@ -253,15 +236,11 @@ class _DashSidebar extends StatelessWidget {
               ),
             ),
           ),
-
           Container(height: 1.5, color: _border),
           const SizedBox(height: 6),
-
-          // ── Nav items ─────────────────────────────────────────
           Expanded(
             child: ListView(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               children: _items.map((item) {
                 final active = selected == item.idx;
                 return Padding(
@@ -275,8 +254,7 @@ class _DashSidebar extends StatelessWidget {
                       hoverColor: _hover,
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 170),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                         decoration: BoxDecoration(
                           color: active ? _selBg : Colors.transparent,
                           borderRadius: BorderRadius.circular(12),
@@ -298,10 +276,7 @@ class _DashSidebar extends StatelessWidget {
                                   ? Stack(
                                       clipBehavior: Clip.none,
                                       children: [
-                                        Icon(item.icon,
-                                            size: 22,
-                                            color:
-                                                active ? _selFg : _iconOff),
+                                        Icon(item.icon, size: 22, color: active ? _selFg : _iconOff),
                                         Positioned(
                                           top: -3,
                                           right: -4,
@@ -316,9 +291,7 @@ class _DashSidebar extends StatelessWidget {
                                         ),
                                       ],
                                     )
-                                  : Icon(item.icon,
-                                      size: 22,
-                                      color: active ? _selFg : _iconOff),
+                                  : Icon(item.icon, size: 22, color: active ? _selFg : _iconOff),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -327,9 +300,7 @@ class _DashSidebar extends StatelessWidget {
                                 style: TextStyle(
                                   color: active ? _selFg : _lblOff,
                                   fontSize: 13,
-                                  fontWeight: active
-                                      ? FontWeight.w700
-                                      : FontWeight.w600,
+                                  fontWeight: active ? FontWeight.w700 : FontWeight.w600,
                                   letterSpacing: 0.1,
                                 ),
                               ),
@@ -337,8 +308,7 @@ class _DashSidebar extends StatelessWidget {
                             if (item.badge)
                               AnimatedContainer(
                                 duration: const Duration(milliseconds: 170),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 7, vertical: 2),
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                 decoration: BoxDecoration(
                                   color: active
                                       ? Colors.white.withOpacity(0.25)
@@ -363,24 +333,19 @@ class _DashSidebar extends StatelessWidget {
               }).toList(),
             ),
           ),
-
-          // ── Divider ───────────────────────────────────────────
           Container(
             height: 1.5,
             margin: const EdgeInsets.symmetric(horizontal: 10),
             color: _border,
           ),
           const SizedBox(height: 10),
-
-          // ── User pill ─────────────────────────────────────────
           ListenableBuilder(
             listenable: AuthService.instance,
             builder: (_, __) => GestureDetector(
               onTap: () => onSelect(5),
               child: Container(
                 margin: const EdgeInsets.fromLTRB(10, 0, 10, 14),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
                   color: _selBg.withOpacity(0.08),
                   borderRadius: BorderRadius.circular(14),
@@ -442,7 +407,6 @@ class _DashSidebar extends StatelessWidget {
   }
 }
 
-// ─── Nav entry ─────────────────────────────────────────────────
 class _NavEntry {
   final IconData icon;
   final String label;
@@ -456,7 +420,6 @@ class _NavEntry {
   });
 }
 
-// ─── Logo fallback ─────────────────────────────────────────────
 class _SideLogoFallback extends StatelessWidget {
   const _SideLogoFallback();
   @override
@@ -499,8 +462,7 @@ class OverviewPage extends StatelessWidget {
     return ListenableBuilder(
       listenable: AuthService.instance,
       builder: (context, _) {
-        final firstName =
-            AuthService.instance.user?.firstName ?? 'there';
+        final firstName = AuthService.instance.user?.firstName ?? 'there';
         return SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
           child: Column(
@@ -508,11 +470,135 @@ class OverviewPage extends StatelessWidget {
             children: [
               _GreetingRow(firstName: firstName),
               const SizedBox(height: 28),
+              // ① Project intro banner
+              const _ProjectIntroBanner(),
+              const SizedBox(height: 24),
+              // ② Full explain card
               const _DashboardExplainCard(),
+              const SizedBox(height: 24),
+              // ③ Q&A section
+              const _QASection(),
+              const SizedBox(height: 24),
+              // ④ AI chat
+              const _AiChatSection(),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  PROJECT INTRO BANNER
+// ════════════════════════════════════════════════════════════════
+class _ProjectIntroBanner extends StatelessWidget {
+  const _ProjectIntroBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(24, 22, 24, 22),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1D4ED8), Color(0xFF2563EB), Color(0xFF3B82F6)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1D4ED8).withOpacity(0.25),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Icon badge
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(
+              Icons.water_drop_rounded,
+              color: Colors.white,
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 18),
+          // Text
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Smart Meter App — Borehole Management System',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'A real-time water infrastructure platform designed for Kenyan property owners and estate managers. '
+                  'Connect boreholes, tanks, pumps, and sub-meters into one unified dashboard — monitor consumption, '
+                  'control pumps remotely, detect leaks automatically, and generate accurate tenant bills, all from anywhere.',
+                  style: TextStyle(
+                    color: Color(0xFFBAE6FD),
+                    fontSize: 13,
+                    height: 1.65,
+                  ),
+                ),
+                SizedBox(height: 12),
+                Row(
+                  children: [
+                    _BadgeChip(label: 'IoT-Enabled'),
+                    SizedBox(width: 8),
+                    _BadgeChip(label: 'Real-Time Data'),
+                    SizedBox(width: 8),
+                    _BadgeChip(label: 'WRMA Compliant'),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BadgeChip extends StatelessWidget {
+  final String label;
+  const _BadgeChip({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.18),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.3)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.2,
+        ),
+      ),
     );
   }
 }
@@ -543,50 +629,749 @@ class _DashboardExplainCard extends StatelessWidget {
       child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SecTitle('What is the Smart Meter App?'),
-          SizedBox(height: 14),
-          _P('The Smart Meter App is a comprehensive water management platform built for Kenyan property owners, estate managers, and institutions. It connects your physical water infrastructure — boreholes, storage tanks, municipal supply lines, and individual unit meters — into a single, unified digital dashboard you can access from anywhere, at any time.'),
+          _SecTitle('About Smart Meter App'),
           SizedBox(height: 12),
-          _P('At its core, the system uses IoT-enabled smart meters and sensors that stream readings to a secure backend server every 5 to 15 minutes over GSM, 4G, or RF networks. You always have an up-to-date picture of your water consumption, tank levels, and pump status — without physically visiting the site.'),
-          SizedBox(height: 12),
-          _P('The app brings together four data sources: the main municipal supply meter, the borehole flow meter, individual sub-meters in each unit or zone, and the tank level sensor — giving you a complete and accurate view of every litre entering, moving through, and leaving your property.'),
-
-          SizedBox(height: 28),
-          _HDivider(),
-          SizedBox(height: 24),
-
-          _SecTitle('What problems does it solve?'),
-          SizedBox(height: 14),
-          _P('Many Kenyan properties face three persistent challenges: inaccurate tenant billing, undetected leaks that waste thousands of litres, and the inefficiency of managing borehole pumps manually. Smart Meter App addresses all three simultaneously.'),
-          SizedBox(height: 12),
-          _P('Sub-meters installed in each apartment or zone capture exact consumption per unit. The app automatically applies the current Nairobi Water rising-block tariff to generate itemised bills landlords can share directly with tenants — eliminating disputes and dramatically reducing billing time.'),
-          SizedBox(height: 12),
-          _P('For borehole-dependent properties, remote pump control changes everything. The pump can be scheduled to run during off-peak electricity hours, auto-activated when the tank drops below a configurable threshold, and shut down the moment the tank is full or a leak is detected.'),
-          SizedBox(height: 12),
-          _P('Leak detection works by comparing hourly flow rates against your property\'s baseline. A dripping tap wastes ~34 litres per day; a running toilet up to 400 litres. The system flags anomalies within minutes so you can act before losses become significant.'),
-
-          SizedBox(height: 28),
-          _HDivider(),
-          SizedBox(height: 24),
-
-          _SecTitle('Who is it built for?'),
-          SizedBox(height: 14),
-          _P('The app is designed for property managers overseeing residential apartment blocks, commercial complexes, schools, hospitals, and any institution that relies on a mix of municipal supply and private borehole water. It is equally useful for individual homeowners who want visibility into household water use and remote pump control.'),
-          SizedBox(height: 12),
-          _P('Built with Kenya\'s regulatory environment in mind, the app\'s monthly extraction logs are compatible with WRMA compliance reporting — helping borehole owners stay within their licensed extraction limits without manual record-keeping.'),
-
-          SizedBox(height: 28),
-          _HDivider(),
-          SizedBox(height: 24),
-
-          _SecTitle('How does the data reach you?'),
-          SizedBox(height: 14),
-          _P('Each smart meter or sensor sends readings wirelessly to a backend server using GSM (2G) for remote sites with weak signal, 4G LTE for urban properties needing low-latency updates, or RF/LoRa radio mesh where multiple meters communicate locally before forwarding data to the cloud.'),
-          SizedBox(height: 12),
-          _P('The backend processes and stores every reading, then exposes it through a secure API that powers this dashboard. If connectivity is interrupted, the meters store readings locally and sync automatically when restored — no historical data is ever lost.'),
-          SizedBox(height: 12),
-          _P('All the information you see — tank level, pump status, today\'s consumption, active alerts, and per-unit billing — is derived from that continuous stream of sensor data. Tap any section in the sidebar to explore meters, alerts, reports, and your account settings.'),
+          _P(
+            'Smart Meter App is a real-time water management platform for Kenyan property owners and estate managers. '
+            'It connects your borehole pump, storage tank, municipal supply line, and individual unit sub-meters into one '
+            'unified dashboard — letting you monitor consumption, control pumps remotely, detect leaks automatically, '
+            'generate accurate tenant bills, and stay WRMA-compliant, all without visiting the site.',
+          ),
         ],
+      ),
+    );
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  Q&A SECTION
+// ════════════════════════════════════════════════════════════════
+class _QASection extends StatelessWidget {
+  const _QASection();
+
+  static const _faqs = [
+    _FaqItem(
+      q: 'How often does the system update sensor readings?',
+      a: 'Sensors transmit data every 5 to 15 minutes depending on your connectivity type — 4G LTE provides the most frequent updates for urban sites, while GSM is ideal for remote areas. You can configure the polling interval in Settings.',
+    ),
+    _FaqItem(
+      q: 'Can I control my borehole pump remotely?',
+      a: 'Yes. The Home tab gives you a real-time pump toggle and a scheduling interface. You can set the pump to auto-start when the tank drops below a threshold (e.g. 20%) and auto-stop when it reaches full capacity, or run it manually at any time.',
+    ),
+    _FaqItem(
+      q: 'How does leak detection work?',
+      a: 'The system builds a baseline of your property\'s normal flow patterns over the first two weeks. After that, any hour where flow deviates significantly from baseline — especially during zero-usage hours like 1–4 AM — triggers an alert in the Alerts tab.',
+    ),
+    _FaqItem(
+      q: 'How are tenant water bills calculated?',
+      a: 'Each unit\'s sub-meter records exact consumption in cubic metres. The app applies the Nairobi Water rising-block tariff to generate an itemised bill per unit. Landlords can export bills as PDFs or share them directly from the Analytics tab.',
+    ),
+    _FaqItem(
+      q: 'What happens if the internet goes down on site?',
+      a: 'Smart meters have onboard flash storage and will continue recording readings locally. Once connectivity is restored — via GSM, 4G, or Wi-Fi — all stored readings are automatically synced to the cloud. No historical data is ever lost.',
+    ),
+    _FaqItem(
+      q: 'Is the system compatible with WRMA borehole licensing requirements?',
+      a: 'Yes. The Analytics section generates monthly extraction reports that align with Water Resources Management Authority (WRMA) reporting formats, helping you stay within your licensed daily and annual extraction limits without manual record-keeping.',
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(22, 26, 22, 26),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.92),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFBFD7F5), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1D4ED8).withOpacity(0.06),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDBEAFE),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.quiz_rounded,
+                  color: Color(0xFF1D4ED8),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const _SecTitle('Frequently Asked Questions'),
+            ],
+          ),
+          const SizedBox(height: 20),
+          ..._faqs.map((faq) => _FaqTile(item: faq)),
+        ],
+      ),
+    );
+  }
+}
+
+class _FaqItem {
+  final String q;
+  final String a;
+  const _FaqItem({required this.q, required this.a});
+}
+
+class _FaqTile extends StatefulWidget {
+  final _FaqItem item;
+  const _FaqTile({required this.item});
+
+  @override
+  State<_FaqTile> createState() => _FaqTileState();
+}
+
+class _FaqTileState extends State<_FaqTile> with SingleTickerProviderStateMixin {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: _open ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFF),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: _open ? const Color(0xFF1D4ED8).withOpacity(0.3) : const Color(0xFFBFD7F5),
+          width: 1.5,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => setState(() => _open = !_open),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        color: _open
+                            ? const Color(0xFF1D4ED8)
+                            : const Color(0xFFDBEAFE),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        _open ? Icons.remove : Icons.add,
+                        size: 14,
+                        color: _open ? Colors.white : const Color(0xFF1D4ED8),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        widget.item.q,
+                        style: TextStyle(
+                          color: _open
+                              ? const Color(0xFF1D4ED8)
+                              : const Color(0xFF0F172A),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (_open) ...[
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 34),
+                    child: Text(
+                      widget.item.a,
+                      style: const TextStyle(
+                        color: Color(0xFF475569),
+                        fontSize: 13,
+                        height: 1.7,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  AI CHAT SECTION
+// ════════════════════════════════════════════════════════════════
+
+// ─── Data model ────────────────────────────────────────────────
+class _ChatMsg {
+  final bool isUser;
+  final String text;
+  const _ChatMsg({required this.isUser, required this.text});
+}
+
+// ─── Widget ────────────────────────────────────────────────────
+class _AiChatSection extends StatefulWidget {
+  const _AiChatSection();
+
+  @override
+  State<_AiChatSection> createState() => _AiChatSectionState();
+}
+
+class _AiChatSectionState extends State<_AiChatSection> {
+  final _ctrl     = TextEditingController();
+  final _scroll   = ScrollController();
+  final _msgs     = <_ChatMsg>[];
+  bool  _loading  = false;
+
+  // ── Smart keyword-based AI responses (no external API needed) ──
+  static const _kb = <String, String>{
+    'pump':
+        'Your borehole pump can be controlled from the Home tab. You can toggle it manually, set auto-start/stop thresholds based on tank level (e.g. start at 20%, stop at 95%), or schedule it to run during off-peak electricity hours to reduce costs.',
+    'schedul':
+        'Pump schedules are configured in the Home tab under "Pump Schedule". You can set specific time windows (e.g. 10 PM–5 AM) for the pump to run automatically, helping you take advantage of cheaper off-peak electricity tariffs.',
+    'leak':
+        'Leak detection works by establishing a baseline of your property\'s normal flow patterns. If the system detects unusual flow — especially during low-use hours like 1–4 AM — it raises an alert in the Alerts tab. A dripping tap can waste ~34 L/day; a running toilet up to 400 L/day.',
+    'alert':
+        'Alerts are shown in the Alerts tab (the bell icon in the sidebar). You\'ll receive notifications for high consumption, detected leaks, low tank levels, and pump faults. Threshold values can be customised in Settings → Alert Thresholds.',
+    'bill':
+        'Billing is calculated from each unit\'s sub-meter reading. The app applies the current Nairobi Water rising-block tariff automatically and generates itemised bills per tenant. You can export these as PDFs from the Analytics tab.',
+    'tank':
+        'Tank level is monitored in real time via an ultrasonic or pressure sensor fitted to your storage tank. The current level is shown on the Home tab. You can configure auto-pump activation when the tank drops below your chosen threshold.',
+    'wrma':
+        'The Water Resources Management Authority (WRMA) requires licensed borehole owners to report monthly extraction volumes. The Smart Meter App generates compliant monthly reports automatically from your borehole flow meter data — no manual record-keeping needed.',
+    'sensor':
+        'The system uses four sensor types: a main municipal supply meter, a borehole flow meter, individual unit sub-meters, and a tank level sensor. All send readings to the cloud every 5–15 minutes via GSM, 4G, or LoRa radio.',
+    'offline':
+        'If your site loses internet connectivity, smart meters continue recording readings in onboard flash storage. Once the connection is restored, all stored data is automatically synced to the cloud — no readings are ever lost.',
+    'data':
+        'Meter readings are transmitted wirelessly to a secure backend server every 5–15 minutes. The backend processes every reading and exposes it through an API that powers this dashboard in real time.',
+    'connect':
+        'Meters connect via GSM (2G) for remote low-signal sites, 4G LTE for urban properties needing fast updates, or RF/LoRa mesh where multiple meters relay data locally before uploading to the cloud.',
+    'cost':
+        'The app helps reduce costs in three ways: accurate per-unit billing eliminates over-charging and disputes, leak alerts prevent water wastage, and pump scheduling shifts electricity use to off-peak hours with lower tariffs.',
+    'municipal':
+        'The main municipal supply meter tracks water coming in from the county supply line. This is compared against borehole and sub-meter readings to give you a complete picture of all water entering and leaving your property.',
+    'borehole':
+        'A borehole is a drilled well that taps into underground water. The Smart Meter App monitors your borehole\'s flow meter, controls the submersible pump remotely, and logs daily extraction volumes for WRMA compliance reporting.',
+  };
+
+  String _localReply(String question) {
+    final q = question.toLowerCase();
+    for (final entry in _kb.entries) {
+      if (q.contains(entry.key)) return entry.value;
+    }
+    // Generic fallback
+    return 'Great question! The Smart Meter App covers pump control, leak detection, '
+        'tank monitoring, tenant billing, and WRMA compliance reporting. '
+        'Try asking about a specific feature — for example: "How does leak detection work?" '
+        'or "How is billing calculated?"';
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    final text = _ctrl.text.trim();
+    if (text.isEmpty || _loading) return;
+
+    setState(() {
+      _msgs.add(_ChatMsg(isUser: true, text: text));
+      _loading = true;
+    });
+    _ctrl.clear();
+    _scrollToBottom();
+
+    // Simulate a brief thinking delay for natural feel
+    await Future.delayed(const Duration(milliseconds: 800));
+
+    final reply = _localReply(text);
+    setState(() {
+      _msgs.add(_ChatMsg(isUser: false, text: reply));
+      _loading = false;
+    });
+    _scrollToBottom();
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scroll.hasClients) {
+        _scroll.animateTo(
+          _scroll.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.92),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFBFD7F5), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1D4ED8).withOpacity(0.06),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Header ──────────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.fromLTRB(22, 20, 22, 18),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF1D4ED8), Color(0xFF3B82F6)],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(18),
+                topRight: Radius.circular(18),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.smart_toy_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Ask the Smart Meter Assistant',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      Text(
+                        'Powered by AI — ask anything about water management',
+                        style: TextStyle(
+                          color: Color(0xFFBAE6FD),
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'AI',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ── Suggested prompts (shown when chat is empty) ────
+          if (_msgs.isEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  'How do I schedule my pump?',
+                  'What triggers a leak alert?',
+                  'How is billing calculated?',
+                  'What is WRMA compliance?',
+                ].map((q) => _SuggestChip(
+                  label: q,
+                  onTap: () {
+                    _ctrl.text = q;
+                    _send();
+                  },
+                )).toList(),
+              ),
+            ),
+
+          // ── Messages ────────────────────────────────────────
+          ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 60, maxHeight: 340),
+            child: _msgs.isEmpty && !_loading
+                ? const _ChatEmptyState()
+                : ListView.builder(
+                    controller: _scroll,
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                    shrinkWrap: true,
+                    itemCount: _msgs.length + (_loading ? 1 : 0),
+                    itemBuilder: (ctx, i) {
+                      if (_loading && i == _msgs.length) {
+                        return const _TypingBubble();
+                      }
+                      return _MsgBubble(msg: _msgs[i]);
+                    },
+                  ),
+          ),
+
+          // ── Input row ───────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFBFD7F5)),
+                    ),
+                    child: TextField(
+                      controller: _ctrl,
+                      maxLines: 3,
+                      minLines: 1,
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (_) => _send(),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF0F172A),
+                      ),
+                      decoration: const InputDecoration(
+                        hintText: 'Ask a question about the Smart Meter App…',
+                        hintStyle: TextStyle(
+                          color: Color(0xFF94A3B8),
+                          fontSize: 13,
+                        ),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                GestureDetector(
+                  onTap: _send,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: _loading
+                            ? [const Color(0xFF94A3B8), const Color(0xFFCBD5E1)]
+                            : [const Color(0xFF1D4ED8), const Color(0xFF3B82F6)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF1D4ED8).withOpacity(_loading ? 0 : 0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: _loading
+                        ? const Padding(
+                            padding: EdgeInsets.all(12),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.send_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ── AI disclaimer ────────────────────────────────────
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFFBEB),
+              border: const Border(
+                top: BorderSide(color: Color(0xFFFDE68A), width: 1),
+              ),
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(18),
+                bottomRight: Radius.circular(18),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.info_outline_rounded,
+                  size: 14,
+                  color: Color(0xFFB45309),
+                ),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: RichText(
+                    text: const TextSpan(
+                      style: TextStyle(
+                        color: Color(0xFF92400E),
+                        fontSize: 11,
+                        height: 1.55,
+                      ),
+                      children: [
+                        TextSpan(
+                          text: 'AI-generated responses. ',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        TextSpan(
+                          text:
+                              'Answers are produced by an AI language model and may not always be accurate. '
+                              'Always verify critical operational or regulatory decisions with a qualified engineer or the Smart Meter support team.',
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Suggested prompt chip ─────────────────────────────────────
+class _SuggestChip extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+  const _SuggestChip({required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEFF6FF),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFF93C5FD)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.arrow_forward_rounded, size: 11, color: Color(0xFF1D4ED8)),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Color(0xFF1D4ED8),
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Empty state ───────────────────────────────────────────────
+class _ChatEmptyState extends StatelessWidget {
+  const _ChatEmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.chat_bubble_outline_rounded, size: 32, color: Color(0xFFCBD5E1)),
+            SizedBox(height: 8),
+            Text(
+              'Select a suggested question above\nor type your own below.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Color(0xFF94A3B8),
+                fontSize: 12,
+                height: 1.6,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Message bubble ────────────────────────────────────────────
+class _MsgBubble extends StatelessWidget {
+  final _ChatMsg msg;
+  const _MsgBubble({required this.msg});
+
+  @override
+  Widget build(BuildContext context) {
+    final isUser = msg.isUser;
+    return Align(
+      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        constraints: const BoxConstraints(maxWidth: 480),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        decoration: BoxDecoration(
+          gradient: isUser
+              ? const LinearGradient(
+                  colors: [Color(0xFF1D4ED8), Color(0xFF3B82F6)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: isUser ? null : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(16),
+            topRight: const Radius.circular(16),
+            bottomLeft: Radius.circular(isUser ? 16 : 4),
+            bottomRight: Radius.circular(isUser ? 4 : 16),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: (isUser ? const Color(0xFF1D4ED8) : const Color(0xFF475569))
+                  .withOpacity(0.10),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Text(
+          msg.text,
+          style: TextStyle(
+            color: isUser ? Colors.white : const Color(0xFF1E293B),
+            fontSize: 13,
+            height: 1.65,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Typing indicator ──────────────────────────────────────────
+class _TypingBubble extends StatefulWidget {
+  const _TypingBubble();
+
+  @override
+  State<_TypingBubble> createState() => _TypingBubbleState();
+}
+
+class _TypingBubbleState extends State<_TypingBubble>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _anim = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _anim.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF1F5F9),
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(16),
+            topRight: Radius.circular(16),
+            bottomRight: Radius.circular(16),
+            bottomLeft: Radius.circular(4),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(3, (i) {
+            return AnimatedBuilder(
+              animation: _anim,
+              builder: (_, __) {
+                final offset = ((i / 3) * 3.14 * 2);
+                final opacity = 0.3 +
+                    0.7 *
+                        ((1 + ((_anim.value * 3.14 * 2 + offset).truncate() % 628) / 628) /
+                            2);
+                return Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    color: Color.fromRGBO(
+                        29, 78, 216, opacity.clamp(0.25, 1.0)),
+                    shape: BoxShape.circle,
+                  ),
+                );
+              },
+            );
+          }),
+        ),
       ),
     );
   }
@@ -643,8 +1428,7 @@ class _ProfileTab extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 5),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                 decoration: BoxDecoration(
                   color: const Color(0xFFDBEAFE),
                   borderRadius: BorderRadius.circular(20),
@@ -720,8 +1504,7 @@ class _PRow extends StatelessWidget {
   final String label;
   final IconData icon;
   final Color color;
-  const _PRow(
-      {required this.label, required this.icon, required this.color});
+  const _PRow({required this.label, required this.icon, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -734,8 +1517,7 @@ class _PRow extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           onTap: () {},
           child: Container(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 16, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
               border: Border.all(color: const Color(0xFFBFD7F5)),
               borderRadius: BorderRadius.circular(12),
@@ -815,8 +1597,7 @@ class _GreetingRow extends StatelessWidget {
         GestureDetector(
           onTap: () => replayWelcome(context),
           child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
             decoration: BoxDecoration(
               color: const Color(0xFFDBEAFE),
               borderRadius: BorderRadius.circular(10),
@@ -911,7 +1692,6 @@ class _AppFooterState extends State<_AppFooter> {
       return;
     }
     setState(() => _submitted = true);
-    // 
   }
 
   @override
@@ -929,7 +1709,6 @@ class _AppFooterState extends State<_AppFooter> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Branding
           const Expanded(
             flex: 3,
             child: Column(
@@ -955,10 +1734,7 @@ class _AppFooterState extends State<_AppFooter> {
               ],
             ),
           ),
-
           const SizedBox(width: 16),
-
-          // Email capture
           Expanded(
             flex: 5,
             child: _submitted
@@ -1019,8 +1795,7 @@ class _AppFooterState extends State<_AppFooter> {
                             backgroundColor: const Color(0xFF2563EB),
                             foregroundColor: Colors.white,
                             elevation: 0,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 14),
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
