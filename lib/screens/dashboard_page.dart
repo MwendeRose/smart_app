@@ -450,9 +450,6 @@ class _SideLogoFallback extends StatelessWidget {
   }
 }
 
-// ════════════════════════════════════════════════════════════════
-//  OVERVIEW PAGE (index 0)
-// ════════════════════════════════════════════════════════════════
 class OverviewPage extends StatelessWidget {
   final VoidCallback? onGoToAlerts;
   const OverviewPage({super.key, this.onGoToAlerts});

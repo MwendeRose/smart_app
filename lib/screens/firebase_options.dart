@@ -1,6 +1,3 @@
-// File generated based on your Firebase project configuration.
-// lib/firebase_options.dart
-
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
@@ -35,11 +32,11 @@ class DefaultFirebaseOptions {
 
   // ── Android ───────────────────────────────────────────────
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey:            'AIzaSyAjzorA3W_eNqvRBsR1vAz-Mc7_w3O1T8Y',
+    apiKey:            'AIzaSyCDocYZOoFVZIQxq5YsuVBp4m92298wG58',
     authDomain:        'smartmeter-b1046.firebaseapp.com',
-    projectId:         'maji-smart-37cef',
-    storageBucket:     'maji-smart-37cef.firebasestorage.app',
-    messagingSenderId: '451817579618',
-    appId:             '1:451817579618:android:05895634c7eaaf881a1d3b',
+    projectId:         'smartmeter-b1046',
+    storageBucket:     'smartmeter-b1046.firebasestorage.app',
+    messagingSenderId: '1034077794363',
+    appId:             '1:1034077794363:android:220f4a082081c347b92c1e',
   );
 }
